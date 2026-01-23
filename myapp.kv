@@ -1,0 +1,28 @@
+<MyWidget>:
+    BoxLayout:
+        orientation: 'vertical'
+        
+        # Main content area
+        Label:
+            text: "Main Content Here"
+            size_hint_y: 1
+        
+        # Bottom Navbar
+        BoxLayout:
+            size_hint_y: None
+            height: 60
+            padding: 10
+            spacing: 10
+            canvas.before:
+                Color:
+                    rgba: 0.2, 0.2, 0.2, 1  # Dark background
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+            
+            Button:
+                text: "Calendar/Home"
+            Button:
+                text: "Voice"
+            Button:
+                text: "Document Scanner"
