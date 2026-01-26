@@ -35,10 +35,11 @@ class CameraClick(BoxLayout):
         print("Captured")
 
 
-class MyApp(App):
+class WhatNow(App):
     def build(self):
+        self.title = "What Now?"
         return Root()
 
 if __name__ == "__main__":
-    MyApp().run()
+    WhatNow().run()
 
