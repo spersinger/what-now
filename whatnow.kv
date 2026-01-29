@@ -1,0 +1,85 @@
+<Root>:
+    orientation: "vertical"
+    BoxLayout:
+        size_hint_y: None
+        height: 60
+        spacing: 10
+
+        Button:
+            text: "Settings"
+            on_release: sm.current = "settings"
+
+    ScreenManager:
+        id: sm
+
+        Home:
+            name: "home"
+        Voice:
+            name: "voice"
+        Scanner:
+            name: "scanner"
+        Edit:
+            name: "edit"
+
+    BoxLayout:
+        size_hint_y: None
+        height: 60
+        spacing: 10
+
+        Button:
+            text: "Home"
+            on_release: sm.current = "home"
+        Button:
+            text: "Voice"
+            on_release: sm.current = "voice"
+        Button:
+            text: "Scanner"
+            on_release: sm.current = "scanner"
+        Button:
+            text: "Edit Manually"
+            on_release: sm.current = "edit"
+
+<CameraClick>:
+    orientation: 'vertical'
+    Camera:
+        id: camera
+        resolution: (640, 480)
+        play: False 
+    BoxLayout:
+        size_hint_y: None
+        height: '48dp'
+        anchor_x: 'center'
+        anchor_y: 'center'
+
+        Button:
+            text: 'Scan'
+            size_hint_x: 0.25
+            size_hint_y: None
+            height: '48dp'
+            on_press: root.capture()
+
+        Button:
+            text: 'Upload'
+            size_hint_x: 0.25
+            size_hint_y: None
+            height: '48dp'
+            on_press: root.upload()
+
+<Home>:
+    Label:
+        text: "Home Screen"
+
+<Voice>:
+    Label:
+        text: "Voice Screen"
+
+<Scanner>:
+    CameraClick:
+        id: cam_view
+        padding: [0, 0, 0, 20]  # left, top, right, bottom: 20px gap
+
+<Edit>:
+    Label:
+        text: "Edit Screen"
+
+
