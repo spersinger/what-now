@@ -20,8 +20,8 @@ setup_env() {
     echo -e "exported venv to current path (changes only persist in this terminal instance)\n"
 
     # install kivy
-    pip install "kivy[full]"
-    echo -e "\ninstalled kivy."
+    pip install -r requirements.txt
+    echo -e "\ninstalled requiremnets."
 }
 
 main() {
