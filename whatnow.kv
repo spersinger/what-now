@@ -1,5 +1,13 @@
 <Root>:
     orientation: "vertical"
+    BoxLayout:
+        size_hint_y: None
+        height: 60
+        spacing: 10
+
+        Button:
+            text: "Settings"
+            on_release: sm.current = "settings"
 
     ScreenManager:
         id: sm
@@ -30,13 +38,14 @@
         Button:
             text: "Edit Manually"
             on_release: sm.current = "edit"
+
 <CameraClick>:
     orientation: 'vertical'
     Camera:
         id: camera
         resolution: (640, 480)
         play: False 
-    AnchorLayout:
+    BoxLayout:
         size_hint_y: None
         height: '48dp'
         anchor_x: 'center'
@@ -48,6 +57,13 @@
             size_hint_y: None
             height: '48dp'
             on_press: root.capture()
+
+        Button:
+            text: 'Upload'
+            size_hint_x: 0.25
+            size_hint_y: None
+            height: '48dp'
+            on_press: root.upload()
 
 <Home>:
     Label:
