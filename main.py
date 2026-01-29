@@ -7,12 +7,15 @@ except ModuleNotFoundError:
     quit()
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.screenmanager import ScreenManager, Screen
+from kivy.uix.boxlayout import BoxLayout
 from kivy.config import Config
 from kivy.core.window import Window
-import time
 
 Window.size = (440,946)
 Config.set('kivy', 'camera', 'opencv')
+Config.set('graphics', 'resizable', '0')
+Config.set('graphics', 'width', '440')
+Config.set('graphics', 'height', '946')
 
 class Home(Screen): pass
 class Voice(Screen): pass
@@ -31,14 +34,12 @@ class Root(BoxLayout):
 
 class CameraClick(BoxLayout):
     def capture(self):
+        print("Captured todo")
+    def upload(self):
         '''
-        Function to capture the images and give them the names
-        according to their captured time and date.
+        Function to upload images from a camera roll or desktop
         '''
-        camera = self.ids['camera']
-        timestr = time.strftime("%Y%m%d_%H%M%S")
-        camera.export_to_png("IMG_{}.png".format(timestr))
-        print("Captured")
+        print("Upload todo")
 
 
 class WhatNow(App):
