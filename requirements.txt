@@ -1,4 +1,4 @@
-# kivy
+# kivy (requires python<=3.13)
 certifi==2026.1.4
 charset-normalizer==3.4.4
 docutils==0.22.4
@@ -14,4 +14,4 @@ urllib3==2.6.3
 # non-kivy
 numpy==2.4.1
 opencv-python==4.13.0.90
-PyAudio==0.2.14
+PyAudio==0.2.14 # NOTE: requires python3.13-devel
