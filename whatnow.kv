@@ -70,8 +70,24 @@
         text: "Home Screen"
 
 <Voice>:
-    Label:
-        text: "Voice Screen"
+    BoxLayout:
+        orientation: "vertical"
+        padding: 20
+        spacing: 20
+
+        id: voice_root
+
+        Label:
+            text: "Voice screen"
+
+
+        Button:
+            id: record_button
+            text: "Record"
+            size_hint_y: None
+            height: "48dp"
+            on_release: root.start_voice()
+
 
 <Scanner>:
     CameraClick:
