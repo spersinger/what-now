@@ -15,6 +15,9 @@ Config.set('graphics', 'resizable', '0')
 Config.set('graphics', 'width', '440')
 Config.set('graphics', 'height', '946')
 
+# initialize the speech recognizer
+r = sr.Recognizer()
+
 class Home(Screen): pass
 
 
