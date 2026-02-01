@@ -1,4 +1,10 @@
-from kivy.app import App
+try:
+    from kivy.app import App
+except ModuleNotFoundError:
+    print("\nKivy was not found. Possible issues:")
+    print("\t- python3.13 not used. check with `python --verison` and run `source setup.sh`")
+    print("\t- kivy was never installed. run `source setup.sh` to check, install, or view install errors.")
+    quit()
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.boxlayout import BoxLayout
