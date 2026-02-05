@@ -72,8 +72,8 @@
 <Voice>:
     BoxLayout:
         orientation: "vertical"
-        padding: 20
-        spacing: 20
+        padding: 10
+        spacing: 10
 
         id: voice_root
 
@@ -92,22 +92,27 @@
             BoxLayout:
                 orientation: "vertical"
                 spacing: 20
-                size_hint: None, None
+                #padding: [20,0]
+                size_hint_x: 0.95
+                size_hint_y: None
                 size: self.minimum_size
 
-                Label:
-                    id: voice_label  #will be used to show voice input to user
-                    text: "Click Record to Start"
-                    font_size: "24sp"
-                    color: 1, 1, 1, 1
+                TextInput:
+                    id: voice_text_input  #will be used to show voice input to user
+
+                    hint_text: "Record to start!"
+                    font_size: "16sp"
+                    size_hint_x: 1
+
                     size_hint_y: None
-                    height: self.texture_size[1]
+                    height: "50dp"
 
                 Image:
                     id: mic_icon
                     source: "mic_white.png"
                     size_hint: None, None
                     size: "96dp", "96dp"
+                    pos_hint: {"center_x": 0.5}
 
 
         Button:
@@ -116,6 +121,12 @@
             size_hint_y: None
             height: "48dp"
             on_release: root.start_voice()
+        Button:
+            id: submit_voice_button
+            text: "Submit"
+            size_hint_y: None
+            height: "48dp"
+
 
 
 <Scanner>:

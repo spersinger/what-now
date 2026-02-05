@@ -1,7 +1,7 @@
 from kivy.app import App
-from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.textinput import TextInput
 from kivy.config import Config
 from kivy.core.window import Window
 
@@ -27,6 +27,8 @@ class Voice(Screen):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+        self.listen_thread = None
         # used to stop recording
         self.stop_event = threading.Event()
         # used to change action of the record button
@@ -36,6 +38,7 @@ class Voice(Screen):
     def voice_to_string(self, text):
         app = App.get_running_app()
         app.voice_input += text + " "
+        self.ids.voice_text_input.text += text + " "
 
         print(app.voice_input)
         return
@@ -55,10 +58,11 @@ class Voice(Screen):
             self.ids.record_button.text = "Stop Recording"
 
             # thread for recording
-            threading.Thread(
+            self.listen_thread = threading.Thread(
                 target=self.listen_loop,
                 daemon=True  # allows application to stop thread when closed
-            ).start()
+            )
+            self.listen_thread.start()
         else:
             print("recording stopped")
             self.listening = False
@@ -70,28 +74,31 @@ class Voice(Screen):
             self.stop_event.set()
 
     def listen_loop(self):
-        with sr.Microphone() as source:
-            while not self.stop_event.is_set():
-                try:
-                    # try to ignore background noise
-                    r.adjust_for_ambient_noise(source, duration=0.2)
-                    # start recording
-                    audio = r.listen(source)
-                    # using google for speech to text
-                    text = r.recognize_google(audio)
+        try:
+            with sr.Microphone() as source:
+                # try to ignore background noise
+                r.adjust_for_ambient_noise(source, duration=0.2)
+                while not self.stop_event.is_set():
+                    try:
+                        # start recording
+                        audio = r.listen(source, phrase_time_limit= 5)
+                        # using google for speech to text
+                        text = r.recognize_google(audio)
 
-                    # safely update app state from thread
-                    Clock.schedule_once(
-                        lambda dt, t=text: self.voice_to_string(t)
-                    )
+                        # safely update app state from thread
+                        Clock.schedule_once(
+                            lambda dt, t=text: self.voice_to_string(t)
+                        )
 
-                except sr.UnknownValueError:
-                    pass
-                except sr.RequestError:
-                    Clock.schedule_once(
-                        lambda dt: print("Speech service error")
-                    )
-
+                    except sr.UnknownValueError:
+                        pass
+                    except sr.RequestError:
+                        Clock.schedule_once(
+                            lambda dt: print("Speech service error")
+                        )
+        finally:
+            self.listen_thread = None
+            print("listen thread exited")
 
 class Scanner(Screen):
     pass
