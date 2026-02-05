@@ -77,8 +77,37 @@
 
         id: voice_root
 
-        Label:
-            text: "Voice screen"
+        canvas.before:
+            Color:
+                rgba: 0, 0, 1, 0.5  # Blue background (R,G,B,A), values 0-1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+        # Mic icon and text label in the center
+        AnchorLayout:
+            anchor_x: "center"
+            anchor_y: "center"
+
+            BoxLayout:
+                orientation: "vertical"
+                spacing: 20
+                size_hint: None, None
+                size: self.minimum_size
+
+                Label:
+                    id: voice_label  #will be used to show voice input to user
+                    text: "Click Record to Start"
+                    font_size: "24sp"
+                    color: 1, 1, 1, 1
+                    size_hint_y: None
+                    height: self.texture_size[1]
+
+                Image:
+                    id: mic_icon
+                    source: "mic_white.png"
+                    size_hint: None, None
+                    size: "96dp", "96dp"
 
 
         Button:
@@ -90,9 +119,9 @@
 
 
 <Scanner>:
-    CameraClick:
-        id: cam_view
-        padding: [0, 0, 0, 20]  # left, top, right, bottom: 20px gap
+   # CameraClick:
+    #    id: cam_view
+     #   padding: [0, 0, 0, 20]  # left, top, right, bottom: 20px gap
 
 <Edit>:
     Label:

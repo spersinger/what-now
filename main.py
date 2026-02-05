@@ -4,6 +4,8 @@ from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.boxlayout import BoxLayout
 from kivy.config import Config
 from kivy.core.window import Window
+
+
 import speech_recognition as sr
 import threading
 from kivy.clock import Clock
@@ -34,10 +36,13 @@ class Voice(Screen):
     def voice_to_string(self, text):
         app = App.get_running_app()
         app.voice_input += text + " "
+
         print(app.voice_input)
         return
 
     def start_voice(self):
+        mic_icon = self.ids.mic_icon
+
 
         if not self.listening:
             print("recording started")
@@ -46,6 +51,7 @@ class Voice(Screen):
             self.stop_event.clear()
 
             # change button text when recording
+            mic_icon.source = "mic_green.png"  # change to green
             self.ids.record_button.text = "Stop Recording"
 
             # thread for recording
@@ -59,6 +65,7 @@ class Voice(Screen):
 
             # change button text
             self.ids.record_button.text = "Record"
+            mic_icon.source = "mic_white.png"  # change back to white
 
             self.stop_event.set()
 
@@ -87,12 +94,14 @@ class Voice(Screen):
 
 
 class Scanner(Screen):
+    pass
+'''   
     def on_enter(self):
         self.ids.cam_view.ids.camera.play = True
 
     def on_leave(self):
         self.ids.cam_view.ids.camera.play = False
-
+'''
 class Edit(Screen): pass
 
 class Root(BoxLayout):
