@@ -87,8 +87,8 @@ class Voice(Screen):
                 r.adjust_for_ambient_noise(source, duration=0.2)
                 while not self.stop_event.is_set():
                     try:
-                        # start recording
-                        audio = r.listen(source, phrase_time_limit= 5)
+                        # start recording, 5 seconds for a phrase
+                        audio = r.listen(source, phrase_time_limit= 4)
                         # using google for speech to text
                         text = r.recognize_google(audio)
 
@@ -108,6 +108,7 @@ class Voice(Screen):
             print("listen thread exited")
 
 class Scanner(Screen):
+
     def on_enter(self):
         self.ids.cam_view.ids.camera.play = True
 
