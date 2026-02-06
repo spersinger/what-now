@@ -79,7 +79,7 @@
 
         canvas.before:
             Color:
-                rgba: 0, 0, 1, 0.5  # Blue background (R,G,B,A), values 0-1
+                rgba: 0, 0, 1, 0.5  # Blue background
             Rectangle:
                 pos: self.pos
                 size: self.size
@@ -124,8 +124,10 @@
         Button:
             id: submit_voice_button
             text: "Submit"
+            disabled: True
             size_hint_y: None
             height: "48dp"
+            on_release: root.submit_voice()
 
 
 
