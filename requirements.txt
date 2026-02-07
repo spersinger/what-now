@@ -1,3 +1,4 @@
+
 # kivy (requires python<=3.13)
 certifi==2026.1.4
 charset-normalizer==3.4.4
@@ -10,6 +11,11 @@ pillow==10.4.0
 Pygments==2.19.2
 requests==2.32.5
 urllib3==2.6.3
+
+# AI
+llama_cpp_python==0.3.16
+MarkupSafe==3.0.3
+packaging==26.0
 
 # non-kivy
 numpy==2.4.1
