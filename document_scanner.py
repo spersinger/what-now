@@ -95,18 +95,17 @@ class DocumentScanner(BoxLayout):
             try:
                 result = self.parser.parse(self.scanned_text)
                 self.extracted_json = result
-                print(result)
+                Clock.schedule_once(self._extract_json)
 
             except Exception as e:
                 print(e)
-
-            finally:
-                Clock.schedule_once(self.extract_json)
                 Clock.schedule_once(self._cleanup)
 
     # This will be for validating the events the AI generates
     # A popup will come up for each event and the user will be able to change details if they are incorrect, press accept, or accept all
-    def extract_json(self, _):
+    def _extract_json(self, _):
+        self.processing_popup.dismiss()
+
         self.events_to_process = list(self.extracted_json.get("recurring_events", []))
         self.events_to_process.extend(self.extracted_json.get("exams", []))
         self.events_to_process.extend(self.extracted_json.get("assignments", []))
@@ -128,19 +127,23 @@ class DocumentScanner(BoxLayout):
             # All events processed
             print("Exams: " + str(self.extracted_json.get("exams", [])))
             print("Homework: " + str(self.extracted_json.get("assignments", [])))
+            Clock.schedule_once(self._cleanup)
 
     def on_accept_event(self):
         self.accept_event_popup.dismiss()
         self.current_event_index += 1
         self.show_next_event()  # Show the next event
+
+    def on_accept_all_event(self):
+        self.accept_event_popup.dismiss()
+        self.current_event_index = len(self.events_to_process)
+        self.show_next_event()  # Show the next event
     
     def _cleanup(self, _):
-        self.ids.scan_button.disabled = False
-        if self.processing_popup:
-            self.processing_popup.dismiss()
 
         # TODO: Fix upload button, it is disabled currently since it doesn't work lol
         self.ids.upload_button.disabled = True
+        self.ids.scan_button.disabled = False
         self.ids.camera.opacity = 100
         self.ids.camera.play = True
 
@@ -274,7 +277,7 @@ class DocumentScanner(BoxLayout):
         accept_btn.bind(on_press=lambda x: self.on_accept_event())
 
         accept_all_btn = Button(text='Accept all', size_hint=(1, 0.1))
-        accept_all_btn.bind(on_press=lambda x: self.on_accept_event())
+        accept_all_btn.bind(on_press=lambda x: self.on_accept_all_event())
 
         button_box.add_widget(accept_btn)
         button_box.add_widget(accept_all_btn)
