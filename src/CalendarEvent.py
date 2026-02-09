@@ -49,7 +49,7 @@ class CalendarEvent():
 # for events fully contained within one calendar day
 #
 # TODO: enforce data rules
-#   - end_time must be after start_time (cannot be same; that would be a reminder)
+#   - end_time must be after start_time (cannot be same; ReminderEvent serves that purpose)
 #     (ux note: if user does try to input an event with same start/end time, 
 #      transform it into a reminder instead of using an error)
 class SingleDayEvent(CalendarEvent):
