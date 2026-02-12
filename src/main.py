@@ -11,6 +11,9 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.textinput import TextInput
 from kivy.config import Config
 from kivy.core.window import Window
+from kivy.lang import Builder
+
+Builder.load_file('../whatnow.kv')
 
 
 import speech_recognition as sr
@@ -19,7 +22,7 @@ from kivy.clock import Clock
 import time
 
 # custom classes from other source files
-import src.CalendarEvent
+import CalendarEvent
 
 Window.size = (440,946)
 Config.set('kivy', 'camera', 'opencv')
