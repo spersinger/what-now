@@ -2,7 +2,7 @@
 
 # ignore everything
 *
-# !/* (uncomment if you want to always include a specific kind of file regardless of where it is)
+!/*
 
 # except:
 # -------
