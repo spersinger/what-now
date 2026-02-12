@@ -1,6 +1,6 @@
 from enum import Enum
 from datetime import date as Date, time as Time
-from typing import List
+from typing import List, Dict
 
 # enum type for referring to different notification
 # timespan lengths
@@ -9,6 +9,25 @@ class TimeType(Enum):
     HOURS = 1
     DAYS = 2
     WEEKS = 3
+
+class TimeRange:
+    start_time: Time
+    end_time: Time
+
+# class that holds a range of dates
+class DateRange:
+    start_date: Date
+    end_date: Date
+    
+# class to hold semester start/end dates
+class Semesters:
+    terms: Dict # {str, DateRange}
+    
+# class to hold weekly repeat data
+# repeat: days/week, days/month
+class Repeat:
+    pass
+    
 
 # holds a number of minutes/hours/days/weeks
 # before an event to send the user a notification for
@@ -27,88 +46,31 @@ class NotificationTime():
         super().__setattr__(name, value)
 
 
-
-# parent class for the 3 different kinds of events
+# represents a calendar event, possibly repeating
+# TODO: how to handle changing 1 instance of a repeating event?
+#       - solution 1: group similar instances together in schedule
+#       - solution 2: 
 class CalendarEvent():
     name: str
     description: str | None
     notification_times: List[NotificationTime] | None
+    date_range: DateRange
+    time_range: TimeRange
+    repeat: Repeat | None
+    
     
     def __init__(
                 self, 
                 name:str, 
-                desc:str|None=None, 
-                notifs:List[NotificationTime]|None=None
+                desc:str|None, 
+                notifs:List[NotificationTime]|None,
+                dates: DateRange,
+                times: TimeRange,
+                repeat: Repeat | None
             ):
         self.name = name
         self.description = desc
         self.notification_times = notifs
-
-
-
-# for events fully contained within one calendar day
-#
-# TODO: enforce data rules
-#   - end_time must be after start_time (cannot be same; ReminderEvent serves that purpose)
-#     (ux note: if user does try to input an event with same start/end time, 
-#      transform it into a reminder instead of using an error)
-class SingleDayEvent(CalendarEvent):
-    date: Date
-    start_time: Time
-    end_time: Time
-    
-    def __init__(
-                self, name:str, 
-                date:Date, 
-                start_time:Time, end_time:Time, 
-                desc:str|None=None, 
-                notifs:List[NotificationTime]|None=None
-            ):
-        super().__init__(name, desc, notifs)
-        self.date = date
-        self.start_time = start_time
-        self.end_time = end_time
-
-
-
-# for events spanning more than 1 day
-# (displayed as a banner in the UI)
-#
-# TODO: enforce data rules
-#   - end_date cannot be before start_date
-#   - end_time cannot be before start_time
-class MultiDayEvent(CalendarEvent):
-    start_date: Date
-    end_date: Date
-    start_time: Time | None
-    end_time: Time | None
-    
-    def __init__(
-                self, name:str, 
-                start_date:Date, end_date:Date, 
-                start_time:Time|None=None, end_time:Time|None=None,
-                desc:str|None=None,
-                notifs:List[NotificationTime]|None=None
-            ):
-        super().__init__(name, desc, notifs)
-        self.start_date = start_date
-        self.end_date = end_date
-        self.start_time = start_time
-        self.end_time = end_time
-
-
-
-# reminders represented by instants (not timespans)
-class ReminderEvent(CalendarEvent):
-    date: Date
-    time: Time
-    
-    def __init__(
-                self, name:str, 
-                date:Date, time:Time,
-                desc:str|None=None,
-                notifs:List[NotificationTime]|None=None
-            ):
-        super().__init__(name, desc, notifs)
-        self.date = date
-        self.time = time
+        self.date_range = dates
+        self.time_range = times
+        self.repeat = repeat
