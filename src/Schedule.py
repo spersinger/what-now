@@ -9,15 +9,10 @@ class Schedule():
     def __init__(self):
         events = []
         
-    def search_events(self):
+    # returns a list of best matches for the given input
+    # search by name, date, 
+    def search_events(self, name:str=None, ) -> List[CalendarEvent]:
         pass
     
-    def add_event(self):
+    def add_event(self, event:CalendarEvent):
         pass
-
-    def add_class(self):
-        pass
-
-    def add_reminder(self):
-        pass
-
