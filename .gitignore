@@ -1,2 +1,19 @@
-.venv/
-*.png
+# whitelist-style gitignore
+
+# ignore everything (still looking in subfolders)
+*
+!/*
+
+# except:
+# -------
+
+# documents: gitignore, license, readme, requirements, setup, .kv file
+!.gitignore
+!LICENSE
+!README.md
+!requirements.txt
+!setup.sh
+!whatnow.kx
+
+# source files
+!src/*.py
