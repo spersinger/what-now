@@ -1,19 +1,23 @@
 # whitelist-style gitignore
 
-# ignore everything (still looking in subfolders)
+# ignore everything
 *
-!/*
+# !/* (uncomment if you want to always include a specific kind of file regardless of where it is)
 
 # except:
 # -------
 
-# documents: gitignore, license, readme, requirements, setup, .kv file
+# the gitignore (a little important)
 !.gitignore
+
+# project documents
 !LICENSE
 !README.md
+
+# other misc. project files
 !requirements.txt
 !setup.sh
-!whatnow.kx
+!whatnow.kv
 
 # source files
 !src/*.py
