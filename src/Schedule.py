@@ -8,6 +8,9 @@ class Schedule():
     
     def __init__(self):
         events = []
+        
+    def search_events(self):
+        pass
     
     def add_event(self):
         pass
