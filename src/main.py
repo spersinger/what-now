@@ -15,7 +15,7 @@ from kivy.lang import Builder
 Builder.load_file('../whatnow.kv')
 
 # custom classes from other source files
-# import src.CalendarEvent
+import CalendarEvent
 
 Window.size = (440,946)
 Config.set('kivy', 'camera', 'opencv')
