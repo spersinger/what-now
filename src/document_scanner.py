@@ -60,9 +60,6 @@ class DocumentScanner(BoxLayout):
             ## TODO : This will go to CommandInterpreter
             #################################
 
-            # Disable camera while processing
-            self.ids.camera.play = False
-            self.ids.camera.opacity = 0
 
             # Disable buttons while processing takes place to disallow misinputs
             self.ids.scan_button.disabled = True
@@ -70,12 +67,13 @@ class DocumentScanner(BoxLayout):
 
             # Do OCR, possibly move this to another function at some point
             timestr = time.strftime("%Y%m%d_%H%M%S")
-            file_name = f"pngs/IMG_{timestr}.png"
 
-            self.ids.camera.export_to_png(file_name)
+            camera = self.ids['camera']
+
+            camera.export_to_png("IMG_{}.png".format(timestr))
 
             # Change this to actual scan at some point, it will work the same
-            original_img = cv2.imread(file_name, cv2.IMREAD_GRAYSCALE)
+            original_img = cv2.imread("IMG_{}.png".format(timestr), cv2.IMREAD_GRAYSCALE)
             deskewed_img = deskew_image(original_img)
             processed_img = enhance_preprocessing(deskewed_img)
             # Save for dev purposes
@@ -86,6 +84,10 @@ class DocumentScanner(BoxLayout):
                 processed_img,
                 config="--oem 1 --psm 12"
             )
+
+            # Disable camera while processing
+            self.ids.camera.play = False
+            self.ids.camera.opacity = 0
 
             # Build content for the verification popup, move this to a seperate function
             self.build_verify_popup_ui()
