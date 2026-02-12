@@ -1,1 +1,23 @@
-.venv/
+# whitelist-style gitignore
+
+# ignore everything
+*
+!/*
+
+# except:
+# -------
+
+# the gitignore (a little important)
+!.gitignore
+
+# project documents
+!LICENSE
+!README.md
+
+# other misc. project files
+!requirements.txt
+!setup.sh
+!whatnow.kv
+
+# source files
+!src/*.py
