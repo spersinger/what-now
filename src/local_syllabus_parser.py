@@ -90,6 +90,7 @@ JSON:"""
             print(f"Failed to parse JSON: {e}")
             return {"error": "Failed to parse JSON"}
 
+# TODO: Move these into a class
 
 def deskew_image(img):
     """

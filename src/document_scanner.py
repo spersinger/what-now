@@ -1,4 +1,4 @@
-from image_scanner import *
+from local_syllabus_parser import *
 
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.screenmanager import ScreenManager, Screen
@@ -39,7 +39,6 @@ class CyclingLabel(Label):
         self.event.cancel()
 
 # Main class, extending from whatnow.kv CameraClick class
-# TODO: Rename in the future, CameraClick isn't too descriptive, possible CameraScanner?
 class DocumentScanner(BoxLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -57,10 +56,11 @@ class DocumentScanner(BoxLayout):
         self.extracted_json = Optional[str]
 
     def capture(self):
-            # Disable camera while processing
             ################################
             ## TODO : This will go to CommandInterpreter
             #################################
+
+            # Disable camera while processing
             self.ids.camera.play = False
             self.ids.camera.opacity = 0
 
@@ -70,14 +70,16 @@ class DocumentScanner(BoxLayout):
 
             # Do OCR, possibly move this to another function at some point
             timestr = time.strftime("%Y%m%d_%H%M%S")
-            file_name = f"IMG_{timestr}.png"
+            file_name = f"pngs/IMG_{timestr}.png"
+
+            self.ids.camera.export_to_png(file_name)
 
             # Change this to actual scan at some point, it will work the same
-            original_img = cv2.imread("test_original.png", cv2.IMREAD_GRAYSCALE)
+            original_img = cv2.imread(file_name, cv2.IMREAD_GRAYSCALE)
             deskewed_img = deskew_image(original_img)
             processed_img = enhance_preprocessing(deskewed_img)
             # Save for dev purposes
-            cv2.imwrite("ocr.png", processed_img)
+            cv2.imwrite("pngs/ocr.png", processed_img)
 
             # Scan text using pytesseract
             self.scanned_text = pytesseract.image_to_string(
