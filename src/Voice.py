@@ -44,7 +44,7 @@ class Voice(Screen):
             self.stop_event.clear()
 
             # change button text when recording
-            mic_icon.source = "mic_green.png"  # change to green
+            mic_icon.source = "../mic_green.png"  # change to green
             self.ids.record_button.text = "Stop Recording"
 
             # thread for recording
@@ -61,7 +61,7 @@ class Voice(Screen):
             Clock.schedule_once(lambda dt: setattr(self.ids.record_button, "disabled", False), 3)
             # change button text
             self.ids.record_button.text = "Record"
-            mic_icon.source = "mic_white.png"  # change back to white
+            mic_icon.source = "../mic_white.png"  # change back to white
             #enable submit button
             self.ids.submit_voice_button.disabled = False
 
