@@ -52,8 +52,13 @@ class Voice(Screen):
 
     def start_voice(self):
         mic_icon = self.ids.mic_icon
+        app = App.get_running_app()
 
         if not self.listening:
+            #resets the input when recording is started
+            app.voice_input = ""
+            self.ids.voice_text_input.text = ""
+
             print("recording started")
             #disable submit button when recording
             self.ids.submit_voice_button.disabled = True
@@ -115,9 +120,12 @@ class Voice(Screen):
 
     # submit buttons function -- will eventually send text to command interpreter
     def submit_voice(self):
-        app = App.get_running_app()
-        app.voice_input = ""
-        self.ids.voice_text_input.text = ""
+        if self.ids.voice_text_input.text is not "":
+            print(self.ids.voice_text_input.text)
+            app = App.get_running_app()
+            app.voice_input = ""
+            self.ids.voice_text_input.text = ""
+
     def on_leave(self):
         # If we are recording, stop
         if self.listening:

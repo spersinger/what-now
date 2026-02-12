@@ -25,18 +25,23 @@
         size_hint_y: None
         height: 60
         spacing: 10
+        padding:5
 
         Button:
             text: "Home"
+
             on_release: sm.current = "home"
         Button:
             text: "Voice"
+
             on_release: sm.current = "voice"
         Button:
             text: "Scanner"
+
             on_release: sm.current = "scanner"
         Button:
             text: "Edit Manually"
+
             on_release: sm.current = "edit"
 
 <CameraClick>:
@@ -79,7 +84,7 @@
 
         canvas.before:
             Color:
-                rgba: 0, 0, 1, 0.5  # Blue background
+                rgba: 0.10, 0.20, 0.45, 1  # Blue background
             Rectangle:
                 pos: self.pos
                 size: self.size
@@ -120,6 +125,7 @@
             text: "Record"
             size_hint_y: None
             height: "48dp"
+
             on_release: root.start_voice()
         Button:
             id: submit_voice_button
@@ -127,15 +133,18 @@
             disabled: True
             size_hint_y: None
             height: "48dp"
+
+
+
             on_release: root.submit_voice()
 
 
 
 
 <Scanner>:
-   # CameraClick:
-    #    id: cam_view
-     #   padding: [0, 0, 0, 20]  # left, top, right, bottom: 20px gap
+    CameraClick:
+        id: cam_view
+        padding: [0, 0, 0, 20]  # left, top, right, bottom: 20px gap
 
 <Edit>:
     Label:
