@@ -124,13 +124,25 @@ class NotificationTime():
 # TODO: how to handle changing 1 instance of a repeating event?
 #       - solution 1: group similar instances together in schedule
 #       - solution 2: 
+# TODO: simplify? allow data to be set with strings for convenience
+#       - notif_times: string* (0 or more) ex. "1 hour", "3 minutes"
+#       - date_range: 
+#           - tuple(Date, Date) ex. (Date(2026, 12, 23), Date(2026, 12, 24))
+#           - Date (same start/end date)
+#           - string+ (1 or 2) ex. "12/23", "12/24" ("mm/dd/yyyy" only)
+#       - time_range:
+#           - tuple(Time, Time)
+#           - Time (same start/end time)
+#           - string+ (1 or 2) ex. "13:00", "13:50"
+#       - repeat:
+#           - string ex. "every 2 days" or "every week umtwrfs" or "every month 12,13,14" or "every year 12/13,12/14,12/15"
 class CalendarEvent():
     name: str
-    description: str | None
-    notification_times: List[NotificationTime] | None
+    description: str
+    notification_times: List[NotificationTime]
     date_range: DateRange
     time_range: TimeRange
-    repeat: Repeat | None
+    repeat: Repeat
     
     
     def __init__(
