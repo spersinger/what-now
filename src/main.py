@@ -16,6 +16,7 @@ Builder.load_file('../whatnow.kv')
 
 # custom classes from other source files
 from CalendarEvent import CalendarEvent
+from Schedule import Schedule
 
 Window.size = (440,946)
 Config.set('kivy', 'camera', 'opencv')
@@ -56,3 +57,11 @@ class WhatNow(App):
 if __name__ == "__main__":
     WhatNow().run()
 
+
+
+
+# TODO: remove 
+# schedule testing
+test = Schedule()
+test.TEST_SET_SCHEDULE()
+test.TEST_PRINT_SCHEDULE()
