@@ -216,7 +216,7 @@ class CalendarEvent():
                 notifs:List[NotificationTime]|None,
                 dates: DateRange,
                 times: TimeRange,
-                repeat: Repeat | None
+                repeat: Repeat
             ):
         self.name = name
         self.description = desc
@@ -224,6 +224,52 @@ class CalendarEvent():
         self.date_range = dates
         self.time_range = times
         self.repeat = repeat
+        
+    def get_next_occurrence_dates(self) -> DateRange | None:
+        """if a repeating event, get the next occurrence. Returns None if last occurrence."""
+        
+        # helper to avoid repeated code
+        def get_next_cycle_date(self) -> Date | None:
+            """returns the would-be next event (if repeating)."""
+            match self.repeat.cycle.type:
+                case TimeType.DAY: # repeat every day
+                    self.date_range.start_date + 1
+
+                case TimeType.WEEK: # repeat specific days per week
+                    pass
+
+                case TimeType.MONTH: # specific days per month
+                    pass
+
+                case TimeType.YEAR: # specific dates per year
+                    pass
+
+                case _:
+                    pass
+        
+        # guard clause: return None if not a repeating event (repeat=num_times, val=0)
+        if self.repeat.duration == DurationType.NUM_TIMES and self.repeat.duration.value == 0:
+            return None
+        
+        # duration: forever, num times, until_date
+        # for each type, get the next event based on cycle
+        match self.repeat.duration.dur_type:
+            case DurationType.FOREVER:
+                # there will always be a next event
+                pass
+
+            case DurationType.NUM_TIMES:
+                pass
+
+            case DurationType.UNTIL_DATE:
+                pass
+            
+            case _:
+                print("error: invalid duration type")
+    
+    def is_last_occurrence(self) -> bool:
+        """if a repeating event, determine whether this one is the last occurrence."""
+        return self.get_next_occurrence_dates() == None
         
     # for printing
     def __str__(self):
