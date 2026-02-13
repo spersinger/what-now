@@ -16,40 +16,18 @@ class Schedule():
     
     def add_event(self, event:CalendarEvent):
         
-        # repeating event: create all as individual events
-        if event.repeat is not None:
-            group = [] # will be appended to "events"
-            
-            # add copies of events based on duration, then repeat type
-            if event.repeat.duration.dur_type == DurationType.NUM_TIMES:
-                num_events = event.repeat.duration.value
-
-                # add initial event to group
-                group.append(event)
-                
-                # add copies of the event to the group
-                for i in range (num_events):
-                    # create next copy
-                    next_event: CalendarEvent = event
-                    
-                    # correctly adjust date next based on repeat type
-                    match(next_event.repeat.cycle.type):
-                        case TimeType.DAYS: # every day: the next day
-                            next_event.date_range.start_date.day += 1
-                            next_event.date_range.end_date.day += 1
-                        case TimeType.WEEKS: # days/week: next day in U M T W R F S cycle
-                            pass
-                        case TimeType.MONTHS:
-                            pass
-                        case TimeType.YEARS:
-                            pass
-                        case _:
-                            print("error: cycle type not permitted (only days, weeks, months, years)")
-                    
-                    pass
-                
-            else: # == DurationType.UNTIL_DATE
-                pass
+        # create group to hold event(s)
+        group: List[CalendarEvent] = []
+        
+        # add any recurrences of the event to the group (do while)
+        while True:
+            group.append(event)
+            event.date_range = event.get_next_occurrence_dates()
+            if event.is_last_occurrence():
+                break
+        
+        # append the group to the group list
+        self.events.append(group)
 
             
     
