@@ -2,17 +2,28 @@ from enum import Enum
 from datetime import date as Date, time as Time
 from typing import List, Dict, Set
 
-# enum type for referring to different notification
-# timespan lengths
+# represents different timespan derivatives
 class TimeType(Enum):
-    MINUTES = "minutes"
-    HOURS = "hours"
-    DAYS = "days"
-    WEEKS = "weeks"
-    MONTHS = "months"
-    YEARS = "years"
+    """reprenents a time denomination."""
     
+    MINUTE = "minute(s)"
+    HOUR = "hour(s)"
+    DAY = "day(s)"
+    WEEK = "week(s)"
+    MONTH = "month(s)"
+    YEAR = "year(s)"
+
 class Day(Enum):
+    """
+    represents a weekday.
+    
+    triple-letters are the first three letters of the day.
+    
+    single-letters are the first letter of the day, except:
+        U (for Sunday)
+        R (for Thursday)
+    """
+    
     SUNDAY    = SUN = U = 0
     MONDAY    = MON = M = 1
     TUESDAY   = TUE = T = 2
@@ -21,7 +32,16 @@ class Day(Enum):
     FRIDAY    = FRI = F = 5
     SATURDAY  = SAT = S = 6
 
+# holds a single range of times
 class TimeRange:
+    """
+    holds a start and end time.
+    
+    times can be the same (representing one instant, ex. for a reminder).
+    
+    end time can be "before" end time (for multi-day events).
+        
+    """
     start_time: Time
     end_time: Time
     
@@ -34,6 +54,11 @@ class TimeRange:
 
 # class that holds a range of dates
 class DateRange:
+    """
+    holds a start and end date.
+    
+    dates can be the same (represeting a single-day event).
+    """
     start_date: Date
     end_date: Date
     
@@ -49,9 +74,23 @@ class DateRange:
 class Semesters:
     terms: Dict # {str, DateRange}
 
+# specifies amount of repeats.
+# type: one of:
+#       - TimeType.DAY (repeat every day)
+#       - TimeType.WEEK (repeat every week on specific weekdays)
+#       - TimeType.MOTNH (repeat every month on specific dates)
+#       - TimeType.YEAR (repeat every year on specific dates)
+# set: set of days the event will repeat on.
+#       - if type==WEEK: set of weekdays
+#       - else: set of Dates (if months, always use january)
 class RepeatCycle():
+    """specifies how an event repeats."""
+    
     type: TimeType
+    """by what timespan to repeat (daily, weekly, monthly, or yearly)"""
+    
     set: Set[Date] | Set[Day]
+    """which specific days (weekly) or dates (monthly/yearly) to repeat on"""
     
     def __init__(self, type:TimeType, set: Set[Date] | Set[Day]):
         self.type = type
@@ -66,15 +105,25 @@ class RepeatCycle():
             return "every month on days " + (str(date.day) + ", " for date in self.set)
         else: # self.type == TimeType.YEARS
             return "every year on " + (str(date) + ", " for date in self.set)
-    
-    
+
 class DurationType(Enum):
+    """
+    type of repeat duration.
+    
+    one of FOREVER, NUM_TIMES, or UNTIL_DATE
+    """
+    FOREVER = "forever"
     NUM_TIMES = "times"
     UNTIL_DATE = "until"
-    
+
 class RepeatDuration:
+    """repeat duration and amount."""
+    
     dur_type: DurationType
+    """type of duration (forever, number of times, or until specific date)"""
+    
     value: int | Date | None
+    """how many times or what date until"""
     
     def __init__(self, type:DurationType, value: int | Date | None):
         self.dur_type = type
@@ -88,23 +137,29 @@ class RepeatDuration:
         else: # type(self.value) is Date
             return "until " + self.value
             
-    
-# class to hold weekly repeat data
-# repeat: days/week, days/month, days/year
+
 class Repeat:
+    """repeat data for an event."""
+    
     cycle: RepeatCycle
+    """how the event repeats"""
+    
     duration: RepeatDuration
+    """how long the event repeats for"""
     
     def __init__(self, repeat:RepeatCycle, duration: RepeatDuration):
         self.cycle = repeat
         self.duration = duration
     
 
-# holds a number of minutes/hours/days/weeks
-# before an event to send the user a notification for
 class NotificationTime():
+    """how long before an event to send a notification."""
+    
     timespan_type: TimeType
+    """time denomination (minutes, hours, etc.)"""
+    
     num_timespans: int
+    """number of time denominations"""
     
     def __init__(self, num:int, type:TimeType=TimeType.MINUTES):
         if(num < 0): raise ValueError("Number of timespans must be non-negative.")
@@ -137,12 +192,21 @@ class NotificationTime():
 #       - repeat:
 #           - string ex. "every 2 days" or "every week umtwrfs" or "every month 12,13,14" or "every year 12/13,12/14,12/15"
 class CalendarEvent():
+    """represents a single calendar event."""
+    
     name: str
     description: str
     notification_times: List[NotificationTime]
+    """list of times by which to send out a notification."""
+    
     date_range: DateRange
+    """start and end dates"""
+    
     time_range: TimeRange
+    """start and end times"""
+    
     repeat: Repeat
+    """how and how long by which the event repeats"""
     
     
     def __init__(
