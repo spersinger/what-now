@@ -24,6 +24,9 @@ Config.set('graphics', 'resizable', '0')
 Config.set('graphics', 'width', '440')
 Config.set('graphics', 'height', '946')
 
+# global data objects: schedule, command interpreter
+user_schedule = Schedule()
+
 class Home(Screen): pass
 class Voice(Screen): pass
 class Scanner(Screen):
@@ -56,12 +59,3 @@ class WhatNow(App):
 
 if __name__ == "__main__":
     WhatNow().run()
-
-
-
-
-# TODO: remove 
-# schedule testing
-test = Schedule()
-test.TEST_SET_SCHEDULE()
-test.TEST_PRINT_SCHEDULE()
