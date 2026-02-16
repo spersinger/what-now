@@ -64,9 +64,13 @@ class Schedule():
         self.add_event(event)
         
     # TESTING: prints the schedule to the console
-    def TEST_PRINT_SCHEDULE(self):
+    def __str__(self):
+        result: str = ""
         for group in self.events:
             
-            print("\n------ EVENT GROUP ------")
+            result += "\n\n\n------ EVENT GROUP ------\n"
+            result += "total: " + str(len(group)) + " event(s)\n\n"
             for event in group:
-                print(event, "\n")
+                result += str(event) + "\n"
+            
+        return result
