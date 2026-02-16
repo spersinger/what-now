@@ -17,6 +17,7 @@ Builder.load_file('../whatnow.kv')
 # custom classes from other source files
 from CalendarEvent import CalendarEvent
 from Schedule import Schedule
+from Command import CommandInterpreter
 
 Window.size = (440,946)
 Config.set('kivy', 'camera', 'opencv')
@@ -26,6 +27,7 @@ Config.set('graphics', 'height', '946')
 
 # global data objects: schedule, command interpreter
 user_schedule = Schedule()
+command_interpreter = CommandInterpreter()
 
 class Home(Screen): pass
 class Voice(Screen): pass
