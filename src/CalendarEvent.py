@@ -162,6 +162,15 @@ class Repeat:
     duration: RepeatDuration
     """how long the event repeats for"""
     
+    # 2 halves: cycle, duration
+    # cycle: ("day" | "week [mtwrf]" | "month 13 31" | "year 1/13 4/4")
+    # duration: ("forever" | "n times" | "until 1/13/26")
+    def __init__(self, repeat:str):
+        pass
+
+    def __init__(self, repeat: Tuple[str]):
+        pass
+    
     def __init__(self, repeat:RepeatCycle, duration: RepeatDuration):
         self.cycle = repeat
         self.duration = duration
@@ -175,6 +184,35 @@ class NotificationTime():
     
     num_timespans: int
     """number of time denominations"""
+    
+    def __init__(self, time: str):
+        """initialize via a string. Example: \"10 hours\""""
+        # parse number
+        num, type = time.lower().split()
+        
+        # convert num to number
+        num = int(num)
+        
+        # convert type to TimeType
+        match type[:2]:
+            case "mi":
+                type = TimeType.MINUTE
+            case "ho":
+                type = TimeType.HOUR
+            case "da":
+                type = TimeType.DAY
+            case "mo":
+                type = TimeType.MONTH
+            case "ye":
+                type = TimeType.YEAR
+            case _: 
+                print("error: invalid notification time type. defaulting to minutes")
+                type = TimeType.MINUTE
+                
+        # set values
+        self.num_timespans = num
+        self.timespan_type = type
+                
     
     def __init__(self, num:int, type:TimeType=TimeType.MINUTE):
         if(num < 0): raise ValueError("Number of timespans must be non-negative.")
@@ -191,9 +229,6 @@ class NotificationTime():
 
 
 # represents a calendar event, possibly repeating
-# TODO: how to handle changing 1 instance of a repeating event?
-#       - solution 1: group similar instances together in schedule
-#       - solution 2: 
 # TODO: simplify? allow data to be set with strings for convenience
 #       - notif_times: string* (0 or more) ex. "1 hour", "3 minutes"
 #       - date_range: 
@@ -223,16 +258,50 @@ class CalendarEvent():
     repeat: Repeat
     """how and how long by which the event repeats"""
     
-    
+    # initialize using strings
     def __init__(
-                self, 
-                name:str, 
-                desc:str, 
-                notifs:List[NotificationTime]|None,
-                dates: DateRange,
-                times: TimeRange,
-                repeat: Repeat
-            ):
+        self,
+        name: str,
+        desc: str,
+        notifs: Tuple[str] | str,
+        dates: Tuple[str] | str,
+        times: Tuple[str] | str,
+        repeat: str
+    ):
+        self.name = name
+        self.desc = desc
+        
+        # can have tuple of notifs or just one
+        if type(notifs) == Tuple[str]:
+            for notif in notifs:
+                self.notification_times.append(NotificationTime(notif))
+        else: # type(notifs) == str
+            self.notification_times = [NotificationTime(notifs)]
+        
+        # can have 1 or 2 dates (if 1, duplicate)
+        if type(dates) == Tuple[str]:
+            self.date_range = DateRange(dates[0], dates[1])
+        else: # type(dates) == str
+            self.date_range = DateRange(dates)
+        
+        # same for times
+        if type(times) == Tuple[str]:
+            self.time_range = TimeRange(times[0], times[1])
+        else: # type(times) == str
+            self.time_range = TimeRange(times)
+            
+        self.repeat = Repeat(repeat)
+    
+    # initialize using full types
+    def __init__(
+        self, 
+        name:str, 
+        desc:str, 
+        notifs:List[NotificationTime]|None,
+        dates: DateRange,
+        times: TimeRange,
+        repeat: Repeat
+    ):
         self.name = name
         self.description = desc
         self.notification_times = notifs
