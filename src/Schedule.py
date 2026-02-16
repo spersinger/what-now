@@ -21,7 +21,7 @@ class Schedule():
         
         # add any recurrences of the event to the group (do while)
         while True:
-            group.append(event)
+            group.append(deepcopy(event))
             event.date_range = event.get_next_occurrence_dates()
             if event.is_last_occurrence():
                 break
@@ -41,17 +41,25 @@ class Schedule():
     # add some manual data to the schedule
     def TEST_SET_SCHEDULE(self):
         
-        name = "not senior project 2"
-        desc = None
-        notifs = [NotificationTime(5)]
-        dates = DateRange(Date.today(), Date.today())
-        times = TimeRange(Time(16), Time(16, 50))
+        event = CalendarEvent(
+            "not senior project 2",
+            "ounstah,.ul crtoaensuh aorseuh naotu ",
+            [NotificationTime(5)],
+            DateRange(Date(2026, 2, 16), Date(2026, 2, 16)),
+            TimeRange(Time(14), Time(15)),
+            Repeat(
+                RepeatCycle(TimeType.WEEK, {Day.M, Day.R}),
+                RepeatDuration(DurationType.NUM_TIMES, (3, Date(2026,2,16)))
+            )
+        )
         
-        rep_type = RepeatCycle(TimeType.WEEKS, {Day.T, Day.W})
-        rep_dur = RepeatDuration(DurationType.NUM_TIMES, 3)
-        repeat = Repeat(rep_type, rep_dur)
+        self.add_event(event)
         
-        event = CalendarEvent(name, desc, notifs, dates, times, repeat)
+        event.name = "irresponsible computing"
+        event.description = "they teach you to be evil"
+        event.notification_times = [NotificationTime(30, TimeType.HOUR), NotificationTime(1)]
+        event.date_range = DateRange(Date(2026, 2, 28), Date(2026, 3, 1))
+        event.repeat.duration = RepeatDuration(DurationType.UNTIL_DATE, Date(2026, 5, 17))
         
         self.add_event(event)
         
@@ -61,4 +69,4 @@ class Schedule():
             
             print("\n------ EVENT GROUP ------")
             for event in group:
-                print(event)
+                print(event, "\n")

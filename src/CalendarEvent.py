@@ -1,7 +1,8 @@
 from enum import Enum
 from monthdelta import monthdelta
 from datetime import date as Date, time as Time, timedelta
-from typing import List, Dict, Set
+from typing import List, Dict, Set, Tuple
+from copy import deepcopy
 
 # represents different timespan derivatives
 class TimeType(Enum):
@@ -103,7 +104,7 @@ class RepeatCycle():
         elif self.type == TimeType.WEEK:
             result = "every "
             for day in self.set:
-                result += str(day) + ", "
+                result += str(day)[4:7] + ", "
             return result[:-2]
         elif self.type == TimeType.MONTH:
             result = "every month on days "
@@ -132,20 +133,24 @@ class RepeatDuration:
     dur_type: DurationType
     """type of duration (forever, number of times, or until specific date)"""
     
-    value: int | Date | None
+    value: Tuple[int, Date] | Date | None
     """how many times or what date until"""
     
-    def __init__(self, type:DurationType, value: int | Date | None):
+    def __init__(self, type:DurationType, value: Tuple[int, Date] | Date | None):
         self.dur_type = type
         self.value = value
         
     def __str__(self):
-        if self.value is None:
-            return "once"
-        elif type(self.value) is int:
-            return str(self.value) + " times"
-        else: # type(self.value) is Date
-            return "until " + self.value
+        match self.dur_type:
+            case DurationType.FOREVER:
+                return "forever"
+            case DurationType.NUM_TIMES:
+                return str(self.value[0]) + " time(s)"
+            case DurationType.UNTIL_DATE:
+                return "until " + str(self.value)
+            case _:
+                print("invalid duration type")
+                return "ERRORRRRRRRR"
             
 
 class Repeat:
@@ -182,7 +187,7 @@ class NotificationTime():
         super().__setattr__(name, value)
         
     def __str__(self):
-        result = "" + self.num_timespans + self.timespan_type
+        return str(self.num_timespans) + " " + self.timespan_type.value
 
 
 # represents a calendar event, possibly repeating
@@ -222,7 +227,7 @@ class CalendarEvent():
     def __init__(
                 self, 
                 name:str, 
-                desc:str|None, 
+                desc:str, 
                 notifs:List[NotificationTime]|None,
                 dates: DateRange,
                 times: TimeRange,
@@ -311,13 +316,45 @@ class CalendarEvent():
         match self.repeat.duration.dur_type:
             case DurationType.FOREVER:
                 # there will always be a next event
-                pass
+                difference = self.date_range.start_date - get_next_cycle_date(self)
+                return DateRange(
+                    self.date_range.start_date + difference,
+                    self.date_range.end_date + difference
+                )
 
             case DurationType.NUM_TIMES:
-                pass
+                num_repeats = self.repeat.duration.value[0]
+                original_date: Date = self.repeat.duration.value[1]
+                
+                # emulate original event to calculate last date with
+                copy: CalendarEvent = deepcopy(self)
+                copy.date_range.start_date = original_date
+                
+                # calculate the date of the last event
+                for i in range(num_repeats):
+                    copy.date_range.start_date = get_next_cycle_date(copy)
+                    
+                last_date = copy.date_range.start_date
+                
+                # if current date is before last date, can safely return next iteration date
+                if self.date_range.start_date < last_date:
+                    difference = get_next_cycle_date(self) - self.date_range.start_date
+                    return DateRange(
+                        self.date_range.start_date + difference,
+                        self.date_range.end_date + difference
+                    )
+                else:
+                    return None
+                
 
             case DurationType.UNTIL_DATE:
-                pass
+                difference = get_next_cycle_date(self) - self.date_range.start_date
+                if self.date_range.start_date + difference > self.repeat.duration.value:
+                    return None
+                return DateRange(
+                    self.date_range.start_date + difference,
+                    self.date_range.end_date + difference
+                )
             
             case _:
                 print("error: invalid duration type")
@@ -334,7 +371,7 @@ class CalendarEvent():
         if self.notification_times is not None:
             result += "notifs:\n"
             for notif in self.notification_times:
-                result += f"\t{notif}\n"
+                result += "\t" + str(notif) + " before\n"
         
         result += "date range: " + str(self.date_range) + "\n"
         result += "time range: " + str(self.time_range) + "\n"
