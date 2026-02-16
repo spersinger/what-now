@@ -1,5 +1,6 @@
 from CalendarEvent import *
 from typing import List
+from Command import Response
 
 # contains all of a user's events
 # purpose: manage calendar events
@@ -33,7 +34,7 @@ class Schedule():
     
     # performs the tasks set by the command
     # ex. create/modify/delete event
-    def perform_command(self, command):
+    def perform_command(self, command) -> Response:
         pass
     
     
