@@ -1,6 +1,6 @@
 from CalendarEvent import *
 from typing import List
-from Command import Response
+from Command import Command, Response, CommandType
 
 # contains all of a user's events
 # purpose: manage calendar events
@@ -34,8 +34,34 @@ class Schedule():
     
     # performs the tasks set by the command
     # ex. create/modify/delete event
-    def perform_command(self, command) -> Response:
-        pass
+    def perform_command(self, command:Command) -> Response:
+        response: Response = Response(command.id)
+        
+        if command.type == CommandType.ADD:
+            raise ValueError("seriously wtf is this")
+        
+        match command.type:
+            case CommandType.SEARCH:
+                pass
+            case CommandType.EDIT:
+                pass
+            case CommandType.ADD: # ???????????????????????????????????????
+                # for SOME reason
+                # during testing, when command.type is set to CommandType.ADD
+                # IT DOESNT MATCH HERE
+                # glad the rest seems to work ig but like wtf
+                # ive verified it in so many ways, i have a breakpoint here
+                # and it says exactly that the command type is what i think it is
+                self.add_event(command.event)
+                response.status_details = "event was added to calendar."
+            case CommandType.DELETE:
+                pass
+            case _:
+                self.add_event(command.event)
+                response.status_details = "event was added to calendar."
+        
+        return response
+        
     
     
     # TESTING: 
@@ -44,7 +70,7 @@ class Schedule():
         
         event = CalendarEvent(
             "not senior project 2",
-            "ounstah,.ul crtoaensuh aorseuh naotu ",
+            "aoeusnth aoeusnth aoeusnth aoeusnth",
             [NotificationTime(5)],
             DateRange(Date(2026, 2, 16), Date(2026, 2, 16)),
             TimeRange(Time(14), Time(15)),

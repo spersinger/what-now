@@ -20,6 +20,12 @@ class Command:
     type: CommandType
     event: CalendarEvent
     
+    def __init__(self, id:int, type:CommandType, event:CalendarEvent):
+        self.id = id
+        self.sent = False
+        self.type = type
+        self.event = event
+    
     
 # a status code from the schedule
 class StatusCode(Enum):
@@ -34,7 +40,13 @@ class Response:
     command_id: int
     status: StatusCode
     status_details: str
-    data: Tuple[int]
+    # data: Tuple[int] # TODO: figure out
+    
+    def __init__(self, id:int):
+        self.command_id = id
+        self.status = StatusCode.SUCCESS
+        self.status_details = ""
+    
     
     
 # command interpreter
@@ -45,7 +57,7 @@ class CommandInterpreter:
     commands: List[Command]
     
     def __init__(self):
-        self.commands = List()
+        self.commands = list()
     
     # interpret text input and create one or more commands based on it
     # uses AI model, slow (but can interpret for voice input)
@@ -57,8 +69,40 @@ class CommandInterpreter:
     def add_command(self, command:Command):
         self.commands.append(command)
     
+    
+    # TODO: handle all cases
+    # for now, only handle the showcase test case (success from adding event)
     def handle_response(self, response:Response):
-        pass
+        
+        # get corresponding command
+        command: Command = None
+        for c in self.commands:
+            if c.id == response.command_id:
+                command = c
+        
+        if command is None:
+            # error: command was removed before schedule finished processing (shouldn't happen)
+            print("schedule response has no corresponding command")
+            return
+
+        # search, edit, add, delete
+        match command.type:
+            case CommandType.SEARCH:
+                pass
+            case CommandType.EDIT:
+                pass
+            case CommandType.ADD:
+                if response.status == StatusCode.SUCCESS:
+                    # success: remove command from list
+                    self.commands.remove(command)
+                else:
+                    pass
+            case CommandType.DELETE:
+                pass
+            case _:
+                print("error: unexpected command type")
+                return
+        
     
     def get_next_unsent_command(self) -> Command:
         index = 0
