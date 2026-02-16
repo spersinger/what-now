@@ -1,5 +1,6 @@
 from enum import Enum
-from datetime import date as Date, time as Time
+from monthdelta import monthdelta
+from datetime import date as Date, time as Time, timedelta
 from typing import List, Dict, Set
 
 # represents different timespan derivatives
@@ -24,13 +25,13 @@ class Day(Enum):
         R (for Thursday)
     """
     
-    SUNDAY    = SUN = U = 0
-    MONDAY    = MON = M = 1
-    TUESDAY   = TUE = T = 2
-    WEDNESDAY = WED = W = 3
-    THURSDAY  = THU = R = 4
-    FRIDAY    = FRI = F = 5
-    SATURDAY  = SAT = S = 6
+    MONDAY    = MON = M = 0
+    TUESDAY   = TUE = T = 1
+    WEDNESDAY = WED = W = 2
+    THURSDAY  = THU = R = 3
+    FRIDAY    = FRI = F = 4
+    SATURDAY  = SAT = S = 5
+    SUNDAY    = SUN = U = 6
 
 # holds a single range of times
 class TimeRange:
@@ -97,13 +98,19 @@ class RepeatCycle():
         self.set = set
     
     def __str__(self):
-        if self.type == TimeType.DAYS:
+        if self.type == TimeType.DAY:
             return "every day"
-        elif self.type == TimeType.WEEKS:
-            return "every " + (str(day) + ", " for day in self.set)
-        elif self.type == TimeType.MONTHS:
-            return "every month on days " + (str(date.day) + ", " for date in self.set)
-        else: # self.type == TimeType.YEARS
+        elif self.type == TimeType.WEEK:
+            result = "every "
+            for day in self.set:
+                result += str(day) + ", "
+            return result
+        elif self.type == TimeType.MONTH:
+            result = "every month on days "
+            for date in self.set:
+                result += str(date.day) + ", "
+            return result
+        else: # self.type == TimeType.YEAR
             return "every year on " + (str(date) + ", " for date in self.set)
 
 class DurationType(Enum):
@@ -133,7 +140,7 @@ class RepeatDuration:
         if self.value is None:
             return "once"
         elif type(self.value) is int:
-            return self.value + " times"
+            return str(self.value) + " times"
         else: # type(self.value) is Date
             return "until " + self.value
             
@@ -161,7 +168,7 @@ class NotificationTime():
     num_timespans: int
     """number of time denominations"""
     
-    def __init__(self, num:int, type:TimeType=TimeType.MINUTES):
+    def __init__(self, num:int, type:TimeType=TimeType.MINUTE):
         if(num < 0): raise ValueError("Number of timespans must be non-negative.")
         self.num_timespans = num
         self.timespan_type = type
@@ -229,23 +236,53 @@ class CalendarEvent():
         """if a repeating event, get the next occurrence. Returns None if last occurrence."""
         
         # helper to avoid repeated code
-        def get_next_cycle_date(self) -> Date | None:
+        def get_next_cycle_date(event: CalendarEvent) -> Date | None:
             """returns the would-be next event (if repeating)."""
-            match self.repeat.cycle.type:
+            
+            event_start: Date = event.date_range.start_date
+            delta_day = timedelta(1) # time delta for incrementing days
+            
+            match event.repeat.cycle.type:
                 case TimeType.DAY: # repeat every day
-                    self.date_range.start_date + 1
+                    return event_start + delta_day
 
                 case TimeType.WEEK: # repeat specific days per week
-                    pass
-
+                    while (event_start + delta_day) % 7 not in event.repeat.cycle.set:
+                        delta_day.days += 1
+                    return event_start + delta_day
+ 
                 case TimeType.MONTH: # specific days per month
-                    pass
+                    # return the smallest date after the current
+                    later_dates = {date for date in event.repeat.cycle.set if date.day > event_start.day}
+                    
+                    # if none later than current, return smallest overall
+                    # (first occurrence next month)
+                    if len(later_dates) == 0:
+                        later_dates = event.repeat.cycle.set
+                        
+                        # increment month for ecah date
+                        for date in later_dates:
+                            date += monthdelta(1)
+                        
+                    return min(later_dates)
 
                 case TimeType.YEAR: # specific dates per year
-                    pass
+                    # return the smallest date after the current
+                    later_dates = {date for date in event.repeat.cycle.set if date > event_start}
+                    
+                    # if none later than current, return smallest overall
+                    # (first occurrence next year)
+                    if len(later_dates) == 0:
+                        later_dates = event.repeat.cycle.set
+                        
+                        # increment year for ecah date
+                        for date in later_dates:
+                            date.year += 1
+                        
+                    return min(later_dates)
 
                 case _:
-                    pass
+                    return None
         
         # guard clause: return None if not a repeating event (repeat=num_times, val=0)
         if self.repeat.duration == DurationType.NUM_TIMES and self.repeat.duration.value == 0:
@@ -273,18 +310,19 @@ class CalendarEvent():
         
     # for printing
     def __str__(self):
-        result = "name" + self.name + "\n"
-        result += "desc: " + self.desc + "\n"
+        result = "name: " + self.name + "\n"
+        result += "desc: " + self.description + "\n"
         
-        result += "notifs:\n"
-        for notif in self.notification_times:
-            result += f"\t{notif}\n"
+        if self.notification_times is not None:
+            result += "notifs:\n"
+            for notif in self.notification_times:
+                result += f"\t{notif}\n"
         
-        result += "date range: " + self.date_range + "\n"
-        result += "time range: " + self.time_range + "\n"
+        result += "date range: " + str(self.date_range) + "\n"
+        result += "time range: " + str(self.time_range) + "\n"
         
         result += "repeat:\n"
-        result += "\ttype: " + self.repeat.cycle + "\n"
-        result += "\tdur: " + self.repeat.duration + "\n"
+        result += "\ttype: " + str(self.repeat.cycle) + "\n"
+        result += "\tdur: " + str(self.repeat.duration) + "\n"
         
         return result
