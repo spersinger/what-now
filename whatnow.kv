@@ -14,8 +14,6 @@
             name: "voice"
         Scanner:
             name: "scanner"
-        Edit:
-            name: "edit"
 
     BoxLayout:
         size_hint_y: None
@@ -31,10 +29,6 @@
         Button:
             text: "Scanner"
             on_release: sm.current = "scanner"
-        Button:
-            text: "Edit Manually"
-            on_release: sm.current = "edit"
-
 
 <DocumentScanner>:
     orientation: 'vertical'
