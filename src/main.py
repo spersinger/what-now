@@ -1,3 +1,10 @@
+from kivy.config import Config
+Config.set('kivy', 'camera', 'opencv')
+Config.set('graphics', 'resizable', '0')
+Config.set('graphics', 'width', '360')
+Config.set('graphics', 'height', '640')
+Config.set('kivy', 'keyboard_mode', 'system')
+
 try:
     from kivy.app import App
 except ModuleNotFoundError:
@@ -5,19 +12,20 @@ except ModuleNotFoundError:
     print("\t- python3.13 not used. check with `python --verison` and run `source setup.sh`")
     print("\t- kivy was never installed. run `source setup.sh` to check, install, or view install errors.")
     quit()
-from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.boxlayout import BoxLayout
-from kivy.config import Config
+from kivy.uix.textinput import TextInput
+
 from kivy.core.window import Window
 from kivy.lang import Builder
 
 Builder.load_file('../whatnow.kv')
 
-# custom classes from other source files
+
 from CalendarEvent import CalendarEvent
 from Schedule import Schedule
 from Command import CommandInterpreter
+from Voice import Voice
 
 Window.size = (440,946)
 Config.set('kivy', 'camera', 'opencv')
@@ -30,7 +38,8 @@ user_schedule = Schedule()
 command_interpreter = CommandInterpreter()
 
 class Home(Screen): pass
-class Voice(Screen): pass
+
+
 class Scanner(Screen):
     def on_enter(self):
         self.ids.cam_view.ids.camera.play = True
@@ -45,6 +54,7 @@ class Root(BoxLayout):
 
 
 class CameraClick(BoxLayout):
+
     def capture(self):
         print("Captured todo")
     def upload(self):
@@ -57,6 +67,8 @@ class CameraClick(BoxLayout):
 class WhatNow(App):
     def build(self):
         self.title = "What Now?"
+        # string for voice input to be used by command interpreter
+        self.voice_input = ""
         return Root()
 
 if __name__ == "__main__":
