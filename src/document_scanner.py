@@ -12,6 +12,8 @@ from kivy.animation import Animation
 from kivy.uix.progressbar import ProgressBar
 from typing import Optional
 
+from ui import *
+
 import time
 import pytesseract
 import numpy as np
@@ -47,9 +49,9 @@ class DocumentScanner(BoxLayout):
         self.scanned_text = Optional[str]
 
         # Popup inits for verifying OCR text and AI processing
-        self.verify_text_popup = Optional[Popup]
-        self.processing_popup = Optional[Popup] 
-        self.accept_event_popup = Optional[Popup]
+        self.verify_text_popup = ThemedPopup
+        self.processing_popup = ThemedPopup
+        self.accept_event_popup = ThemedPopup
 
         # Gen AI parser
         self.parser = LocalSyllabusParser()
@@ -296,7 +298,12 @@ class DocumentScanner(BoxLayout):
         )
 
     def build_verify_popup_ui(self):
-        content = BoxLayout(orientation='vertical', padding=10, spacing=10)
+        content = BoxLayout(orientation='vertical', padding=10, spacing=5)
+
+        title = HeaderLabel(
+            text="[b]Verify Scanned Text[/b]",
+            size_hint=(1, 0.1)
+        )
 
         text_input = TextInput(
             text=self.scanned_text,
@@ -304,13 +311,14 @@ class DocumentScanner(BoxLayout):
             size_hint=(1, 0.8)
         )
 
-        finish_btn = Button(text='Analyze with AI', size_hint=(1, 0.1))
+        finish_btn = PrimaryButton(text='Analyze with AI', size_hint=(1, 0.1))
         finish_btn.bind(on_press=lambda x: self.on_verify_finish())
 
+        content.add_widget(title)
         content.add_widget(text_input)
         content.add_widget(finish_btn)
 
-        self.verify_text_popup = Popup(
+        self.verify_text_popup = ThemedPopup(
             title='Verify Scanned Text',
             content=content,
             size_hint=(0.8, 0.6),

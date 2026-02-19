@@ -1,4 +1,62 @@
+<NavButton>:
+    markup: True
+    background_normal: ""
+    background_down: ""
+    background_color: 0.157, 0.157, 0.157, 1  # background color
+    color: 1, 1, 1, 1
+    font_size: "16sp"
+
+<PrimaryButton>:
+    markup: True
+
+    background_normal: ""
+    background_down: ""
+    background_color: 0, 0, 0, 0   # Disable default fill
+
+    color: 0, 0, 0, 1
+    disabled_color: 0.33, 0.33, 0.33, 1
+
+    canvas.before:
+        Color:
+            rgba:
+                (0.9, 0.9, 0.9, 1) if self.disabled else (1, 1, 1, 1)
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [5]
+
+<ThemedPopup>:
+    title: ""
+    separator_height: 0
+
+    title_size: 0.0001      # Effectively removes bar
+    title_align: "center"
+
+    background: ""
+    background_color: 1, 1, 1, 0
+    overlay_color: 0, 0, 0, 0
+
+    canvas.before:
+        Color:
+            rgba: 0.157, 0.157, 0.157, 1   # #282828
+
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [5]
+
+<HeaderLabel>:
+    markup: True
+    font_size: "32px"
+
 <Root>:
+    canvas.before:
+        Color:
+            rgba: 0.082, 0.082, 0.082, 1  # normalized #151515
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
     orientation: "vertical"
     BoxLayout:
         size_hint_y: None
@@ -19,19 +77,58 @@
         size_hint_y: None
         height: 60
         spacing: 10
+        padding: 5
 
-        Button:
+        canvas.before:
+            Color:
+                rgba: 0, 0, 0, 0.2
+            RoundedRectangle:
+                pos: self.x, self.y + 6
+                size: self.width, self.height
+                radius: [5]
+
+            Color:
+                rgba: 0, 0, 0, 0.15
+            RoundedRectangle:
+                pos: self.x, self.y + 4
+                size: self.width, self.height
+                radius: [5]
+
+            Color:
+                rgba: 0, 0, 0, 0.1
+            RoundedRectangle:
+                pos: self.x, self.y + 2
+                size: self.width, self.height
+                radius: [5]
+
+            # Background rectangle
+            Color:
+                rgba: 0.157, 0.157, 0.157, 1
+            RoundedRectangle:
+                pos: self.pos
+                size: self.size
+                radius: [5]
+
+
+        NavButton:
             text: "Home"
             on_release: sm.current = "home"
-        Button:
+        NavButton:
             text: "Voice"
             on_release: sm.current = "voice"
-        Button:
+        NavButton:
             text: "Scanner"
             on_release: sm.current = "scanner"
 
+
 <DocumentScanner>:
     orientation: 'vertical'
+
+    HeaderLabel:
+        text: "[b]Document Scanner[/b]"
+        halign: "left"
+        text_size: self.width - dp(16), self.height
+        size_hint: (1, 0.2)
 
     Camera:
         id: camera
@@ -48,19 +145,20 @@
         height: '48dp'
         anchor_x: 'center'
         anchor_y: 'center'
+        spacing: 10
 
-        Button:
+        PrimaryButton:
             id: scan_button
-            text: 'Scan'
+            text: '[b]Scan[/b]'
             size_hint_x: 0.25
             size_hint_y: None
             height: '48dp'
             on_press: root.capture()
             disabled: False
 
-        Button:
+        PrimaryButton:
             id: upload_button
-            text: 'Upload'
+            text: '[b]Upload[/b]'
             size_hint_x: 0.25
             size_hint_y: None
             height: '48dp'
@@ -69,18 +167,14 @@
 
 
 <Home>:
-    Label:
-        text: "Home Screen"
+    HeaderLabel:
+        text: "[b]Home Screen[/b]"
 
 <Voice>:
-    Label:
-        text: "Voice Screen"
+    HeaderLabel:
+        text: "[b]Voice Screen[/b]"
 
 <Scanner>:
     DocumentScanner:
         id: cam_view
         padding: [0, 0, 0, 20]  # left, top, right, bottom: 20px gap
-
-<Edit>:
-    Label:
-        text: "Edit Screen"

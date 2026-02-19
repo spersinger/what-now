@@ -11,6 +11,7 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.config import Config
 from kivy.core.window import Window
 from kivy.lang import Builder
+from ui import *
 
 Builder.load_file('../whatnow.kv')
 
