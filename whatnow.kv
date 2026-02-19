@@ -5,10 +5,6 @@
         height: 60
         spacing: 10
 
-        Button:
-            text: "Settings"
-            on_release: sm.current = "settings"
-
     ScreenManager:
         id: sm
 
@@ -18,8 +14,6 @@
             name: "voice"
         Scanner:
             name: "scanner"
-        Edit:
-            name: "edit"
 
     BoxLayout:
         size_hint_y: None
@@ -61,22 +55,20 @@
                 (0.78, 0.36, 0.14, 1) if self.state == 'down' else (0.06, 0.12, 0.30, 1)
 
             on_release: sm.current = "scanner"
-        Button:
-            text: "Edit Manually"
 
-            background_normal: ""
-            background_down: ""
-            background_color:
-                (0.78, 0.36, 0.14, 1) if self.state == 'down' else (0.06, 0.12, 0.30, 1)
-
-            on_release: sm.current = "edit"
-
-<CameraClick>:
+<DocumentScanner>:
     orientation: 'vertical'
+
     Camera:
         id: camera
         resolution: (640, 480)
-        play: False 
+        play: False
+
+    Label:
+        id: loading_text
+        opacity: 0
+        text: "Loading..."
+
     BoxLayout:
         size_hint_y: None
         height: '48dp'
@@ -84,18 +76,23 @@
         anchor_y: 'center'
 
         Button:
+            id: scan_button
             text: 'Scan'
             size_hint_x: 0.25
             size_hint_y: None
             height: '48dp'
             on_press: root.capture()
+            disabled: False
 
         Button:
+            id: upload_button
             text: 'Upload'
             size_hint_x: 0.25
             size_hint_y: None
             height: '48dp'
             on_press: root.upload()
+            disabled: True
+
 
 <Home>:
     Label:
@@ -177,12 +174,10 @@
 
 
 <Scanner>:
-   # CameraClick:
-    #    id: cam_view
-     #   padding: [0, 0, 0, 20]  # left, top, right, bottom: 20px gap
+    DocumentScanner:
+        id: cam_view
+        padding: [0, 0, 0, 20]  # left, top, right, bottom: 20px gap
 
 <Edit>:
     Label:
         text: "Edit Screen"
-
-

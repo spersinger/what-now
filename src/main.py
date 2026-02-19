@@ -23,11 +23,12 @@ Builder.load_file('../whatnow.kv')
 
 
 # custom classes from other source files
+from document_scanner import DocumentScanner
 import CalendarEvent
 import Voice
 
 class Home(Screen): pass
-
+class Voice(Screen): pass
 
 class Scanner(Screen):
     def on_enter(self):
@@ -37,20 +38,7 @@ class Scanner(Screen):
         self.ids.cam_view.ids.camera.play = False
 
 class Edit(Screen): pass
-
-class Root(BoxLayout):
-    pass
-
-
-class CameraClick(BoxLayout):
-
-    def capture(self):
-        print("Captured todo")
-    def upload(self):
-        '''
-        Function to upload images from a camera roll or desktop
-        '''
-        print("Upload todo")
+class Root(BoxLayout): pass
 
 
 class WhatNow(App):
