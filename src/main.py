@@ -1,3 +1,10 @@
+from kivy.config import Config
+Config.set('kivy', 'camera', 'opencv')
+Config.set('graphics', 'resizable', '0')
+Config.set('graphics', 'width', '360')
+Config.set('graphics', 'height', '640')
+Config.set('kivy', 'keyboard_mode', 'system')
+
 try:
     from kivy.app import App
 except ModuleNotFoundError:
@@ -5,28 +12,19 @@ except ModuleNotFoundError:
     print("\t- python3.13 not used. check with `python --verison` and run `source setup.sh`")
     print("\t- kivy was never installed. run `source setup.sh` to check, install, or view install errors.")
     quit()
-from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.textinput import TextInput
-from kivy.config import Config
+
 from kivy.core.window import Window
 from kivy.lang import Builder
 
 Builder.load_file('../whatnow.kv')
 
 
-
 # custom classes from other source files
 import CalendarEvent
 import Voice
-
-Window.size = (440,946)
-Config.set('kivy', 'camera', 'opencv')
-Config.set('graphics', 'resizable', '0')
-Config.set('graphics', 'width', '440')
-Config.set('graphics', 'height', '946')
-
 
 class Home(Screen): pass
 
