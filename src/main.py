@@ -33,14 +33,38 @@ class Voice(Screen): pass
 
 class Scanner(Screen):
     def on_enter(self):
+        
         self.ids.cam_view.ids.camera.play = True
 
     def on_leave(self):
         self.ids.cam_view.ids.camera.play = False
 
 class Edit(Screen): pass
-class Root(BoxLayout): pass
+class Root(BoxLayout):
+    # TODO, fix this, it is janky but works.
+    # The issue is that passing arguments from a .kv file is sorta hit or miss
+    # so I hard code the screen_name onto the buttons, and then just 
+    # don't use the screen name that is passed? I actually don't entirely know 
+    # why this works, but it does so...
+    def set_active(self, screen_name):
+        sm = self.ids.sm
+        # I guess this works here? Unsure why since printing screen name gives us
+        # nothing, but it still switches the screen with sm (screen manager id)
+        sm.current = screen_name
 
+        for btn_id, name in (
+            ("home_button", "Home"),
+            ("voice_button", "Voice"),
+            ("scanner_button", "Scanner"),
+        ):
+            btn = self.ids[btn_id]
+
+            if btn.screen_name == screen_name:
+                btn.text = f"[b]{name}[/b]"
+                btn.color = (1, 1, 1, 1)  # selected color
+            else:
+                btn.text = name
+                btn.color = (0.6, 0.6, 0.6, 1)  # unselected color
 
 class WhatNow(App):
     def build(self):

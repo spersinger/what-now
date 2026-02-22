@@ -3,8 +3,45 @@
     background_normal: ""
     background_down: ""
     background_color: 0.157, 0.157, 0.157, 1  # background color
-    color: 1, 1, 1, 1
+
+    color: (0.4, 0.4, 0.4, 1) if self.state == "down" else (1, 1, 1, 1)
     font_size: "16sp"
+
+<ThemedBox>:
+    background_normal: ""
+    background_active: ""
+    background_color: 1, 1, 1, 0
+
+    canvas.before:
+        # Border
+        Color:
+            rgba: 0.325, 0.325, 0.325, 1
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [10]
+
+        # Fill
+        Color:
+            rgba: 0.157, 0.157, 0.157, 1
+        RoundedRectangle:
+            pos: self.x + 1, self.y + 1
+            size: self.width - 2, self.height - 2
+            radius: [10]
+
+<VoiceTextInput>:
+    background_normal: ""
+    background_active: ""
+    background_color: 1, 1, 1, 0
+
+    foreground_color: 1, 1, 1, 1
+    disabled_foreground_color: 1, 1, 1, 1
+    cursor_color: 1, 1, 1, 1
+    selection_color: 0.3, 0.3, 0.3, 0.5
+
+    padding: dp(12), dp(10)
+    multiline: True
+    line_height: 1
 
 <PrimaryButton>:
     markup: True
@@ -15,7 +52,7 @@
 
     color: 0, 0, 0, 1
     disabled_color: 0.33, 0.33, 0.33, 1
-            #background_normal: ""
+    #background_normal: ""
             #background_down: ""
             #background_color:
                 #(0.78, 0.36, 0.14, 1) if self.state == 'down' else (0.06, 0.12, 0.30, 1)
@@ -23,7 +60,7 @@
     canvas.before:
         Color:
             rgba:
-                (0.9, 0.9, 0.9, 1) if self.disabled else (1, 1, 1, 1)
+                (0.9, 0.9, 0.9, 1) if self.disabled else (0.7, 0.7, 0.7, 1) if self.state == 'down' else (1, 1, 1, 1)
         RoundedRectangle:
             pos: self.pos
             size: self.size
@@ -84,27 +121,11 @@
 
         canvas.before:
             Color:
-                rgba: 0, 0, 0, 0.2
-            RoundedRectangle:
-                pos: self.x, self.y + 6
-                size: self.width, self.height
-                radius: [5]
+                rgba: 0.325, 0.325, 0.325, 1
+            Rectangle:
+                pos: self.x - 1, self.y - 1
+                size: self.width + 2, self.height + 2
 
-            Color:
-                rgba: 0, 0, 0, 0.15
-            RoundedRectangle:
-                pos: self.x, self.y + 4
-                size: self.width, self.height
-                radius: [5]
-
-            Color:
-                rgba: 0, 0, 0, 0.1
-            RoundedRectangle:
-                pos: self.x, self.y + 2
-                size: self.width, self.height
-                radius: [5]
-
-            # Background rectangle
             Color:
                 rgba: 0.157, 0.157, 0.157, 1
             RoundedRectangle:
@@ -114,14 +135,27 @@
 
 
         NavButton:
-            text: "Home"
-            on_release: sm.current = "home"
+            id: home_button
+            text: "[b]Home[/b]"
+            screen_name: "home"
+            on_release:
+                app.root.set_active("home")
         NavButton:
+            id: voice_button
             text: "Voice"
-            on_release: sm.current = "voice"
+            screen_name: "voice"
+            # Set initial non active color
+            color: 0.6, 0.6, 0.6, 1
+            on_release:
+                app.root.set_active("voice")
         NavButton:
+            id: scanner_button
             text: "Scanner"
-            on_release: sm.current = "scanner"
+            screen_name: "scanner"
+            # Set initial non active color
+            color: 0.6, 0.6, 0.6, 1
+            on_release:
+                app.root.set_active("scanner")
 
 
 <DocumentScanner>:
@@ -170,10 +204,163 @@
 
 
 <Home>:
-    HeaderLabel:
-        text: "[b]Home Screen[/b]"
+    ScrollView:
+        do_scroll_x: False
+        do_scroll_y: True
 
+        id: home_root
+
+        BoxLayout:
+            orientation: "vertical"
+            padding: 10
+            spacing: 10
+            size_hint_y: None  # Don't let it shrink to fit ScrollView
+
+            height: self.minimum_height  # Expand to fit all children
+
+
+            HeaderLabel:
+                id: calendar_month_label
+                text: "[b]February[/b]"
+                halign: "left"
+                size_hint_y: None
+                height: self.texture_size[1]
+                text_size: self.width, None
+
+            # Calendar Box
+            ThemedBox:
+                orientation: "vertical"
+                padding: 10
+                spacing: 10
+                
+                size_hint_y: None  # Don't let it shrink to fit ScrollView
+
+                height: self.minimum_height  # Expand to fit all children
+
+            HeaderLabel:
+                text: "[b]Upcoming Events[/b]"
+                halign: "left"
+                size_hint_y: None
+                height: self.texture_size[1]
+                text_size: self.width, None
+
+            # Upcoming events box
+            ThemedBox:
+                orientation: "vertical"
+                padding: 10
+                spacing: 10
+                
+                size_hint_y: None  # Don't let it shrink to fit ScrollView
+
+                height: self.minimum_height  # Expand to fit all children
+
+                # Test Box of upcoming Events
+                BoxLayout:
+                    orientation: "vertical"
+                    padding: 10
+                    spacing: 4
+                    size_hint_y: None  # Don't let it shrink to fit ScrollView
+
+                    height: self.minimum_height  # Expand to fit all children
+
+
+                    Label:
+                        text: "[b]Lecture[/b]"
+                        markup: True
+                        halign: "left"
+                        size_hint_y: None
+                        height: self.texture_size[1]
+                        text_size: self.width, None
+                        font_size: "16px"
+                    Label:
+                        text: "Intro to Computing"
+                        markup: True
+                        halign: "left"
+                        size_hint_y: None
+                        height: self.texture_size[1]
+                        text_size: self.width, None
+                        font_size: "12px"
+                    Label:
+                        text: "10:00AM-11:15AM"
+                        markup: True
+                        halign: "left"
+                        size_hint_y: None
+                        height: self.texture_size[1]
+                        text_size: self.width, None
+                        font_size: "12px"
+                        color: 0.541, 0.541, 0.541, 1
+                # Test Box of upcoming Events
+                BoxLayout:
+                    orientation: "vertical"
+                    padding: 10
+                    spacing: 4
+                    size_hint_y: None  # Don't let it shrink to fit ScrollView
+
+                    height: self.minimum_height  # Expand to fit all children
+
+
+                    Label:
+                        text: "[b]Lecture[/b]"
+                        markup: True
+                        halign: "left"
+                        size_hint_y: None
+                        height: self.texture_size[1]
+                        text_size: self.width, None
+                        font_size: "16px"
+                    Label:
+                        text: "Intro to Computing"
+                        markup: True
+                        halign: "left"
+                        size_hint_y: None
+                        height: self.texture_size[1]
+                        text_size: self.width, None
+                        font_size: "12px"
+                    Label:
+                        text: "10:00AM-11:15AM"
+                        markup: True
+                        halign: "left"
+                        size_hint_y: None
+                        height: self.texture_size[1]
+                        text_size: self.width, None
+                        font_size: "12px"
+                        color: 0.541, 0.541, 0.541, 1
+                # Test Box of upcoming Events
+                BoxLayout:
+                    orientation: "vertical"
+                    padding: 10
+                    spacing: 4
+                    size_hint_y: None  # Don't let it shrink to fit ScrollView
+
+                    height: self.minimum_height  # Expand to fit all children
+
+
+                    Label:
+                        text: "[b]Lecture[/b]"
+                        markup: True
+                        halign: "left"
+                        size_hint_y: None
+                        height: self.texture_size[1]
+                        text_size: self.width, None
+                        font_size: "16px"
+                    Label:
+                        text: "Intro to Computing"
+                        markup: True
+                        halign: "left"
+                        size_hint_y: None
+                        height: self.texture_size[1]
+                        text_size: self.width, None
+                        font_size: "12px"
+                    Label:
+                        text: "10:00AM-11:15AM"
+                        markup: True
+                        halign: "left"
+                        size_hint_y: None
+                        height: self.texture_size[1]
+                        text_size: self.width, None
+                        font_size: "12px"
+                        color: 0.541, 0.541, 0.541, 1
 <Voice>:
+
     BoxLayout:
         orientation: "vertical"
         padding: 10
@@ -181,13 +368,12 @@
 
         id: voice_root
 
-        canvas.before:
-            Color:
-                rgba: 0.10, 0.20, 0.45, 1  # Blue background
-            Rectangle:
-                pos: self.pos
-                size: self.size
-
+        HeaderLabel:
+            text: "[b]Voice[/b]"
+            halign: "left"
+            size_hint_y: None
+            height: self.texture_size[1]
+            text_size: self.width, None
 
         # Mic icon and text label in the center
         AnchorLayout:
@@ -201,15 +387,40 @@
                 size_hint_y: None
                 size: self.minimum_size
 
-                TextInput:
-                    id: voice_text_input  #will be used to show voice input to user
-
-                    hint_text: "Record to start!"
-                    font_size: "16sp"
+                BoxLayout:
+                    id: voice_box_container
                     size_hint_x: 1
-
                     size_hint_y: None
                     height: "50dp"
+                    padding: dp(1)
+                    
+                    canvas.before:
+                        # Border
+                        Color:
+                            rgba: 0.325, 0.325, 0.325, 1
+                        RoundedRectangle:
+                            pos: self.pos
+                            size: self.size
+                            radius: [10]
+
+                        # Fill
+                        Color:
+                            rgba: 0.157, 0.157, 0.157, 1
+                        RoundedRectangle:
+                            pos: self.x + 1, self.y + 1
+                            size: self.width - 2, self.height - 2
+                            radius: [10]
+
+                    VoiceTextInput:
+
+                        id: voice_text_input  #will be used to show voice input to user
+
+                        hint_text: "Record to start!"
+                        font_size: "16sp"
+                        size_hint_x: 1
+
+                        size_hint_y: None
+                        height: "50dp"
 
                 Image:
                     id: mic_icon
@@ -219,29 +430,19 @@
                     pos_hint: {"center_x": 0.5}
 
 
-        Button:
+        PrimaryButton:
             id: record_button
             text: "Record"
             size_hint_y: None
             height: "48dp"
 
-            background_normal: ""
-            background_down: ""
-            background_color:
-                (0.26, 0.38, 0.54, 1) if self.state == 'down' else (0.32, 0.45, 0.62, 1)
-
             on_release: root.start_voice()
-        Button:
+        PrimaryButton:
             id: submit_voice_button
             text: "Submit"
             disabled: True
             size_hint_y: None
             height: "48dp"
-
-            background_normal: ""
-            background_down: ""
-            background_color:
-                (0.26, 0.38, 0.54, 1) if self.state == 'down' else (0.32, 0.45, 0.62, 1)
 
             on_release: root.submit_voice()
 
