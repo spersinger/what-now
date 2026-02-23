@@ -6,6 +6,9 @@ Config.set('graphics', 'resizable', '0')
 Config.set('graphics', 'width', '360')
 Config.set('graphics', 'height', '640')
 Config.set('kivy', 'keyboard_mode', 'system')
+# For fixing multitouch
+Config.remove_option('input', '%(name)s')
+Config.set('input', 'mouse', 'mouse')
 
 try:
     from kivy.app import App
