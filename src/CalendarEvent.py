@@ -1,5 +1,4 @@
 from enum import Enum
-from monthdelta import monthdelta
 from datetime import date as Date, time as Time, timedelta
 from typing import List, Dict, Set, Tuple
 from copy import deepcopy
@@ -50,15 +49,15 @@ class TimeRange:
     @staticmethod
     def _str_to_time(string: str) -> Time:
         hours, minutes = string.split(":")
-        assert len(minutes) == 3
+        assert len(minutes) == 3, "force use of ampm symbol"
         
         ampm = minutes[-1]
-        assert ampm == 'a' or ampm == 'p'
+        assert ampm == 'a' or ampm == 'p', "must have am/pm symbol at end"
         
         minutes = int(minutes[:-1])
         hours = int(hours)
-        assert type(hours) == int
-        assert type(minutes) == int
+        assert type(hours) == int, "type checking"
+        assert type(minutes) == int, "type checking"
         
         if hours == 12:
             if ampm == 'a': hours -= 12 # 12am; 00:00
@@ -66,19 +65,19 @@ class TimeRange:
         else:
             if ampm == 'p': hours += 12 # ex. 1:00p -> 13:00
             
-        assert 0 <= hours <= 23
-        assert 0 <= minutes <= 59
+        assert 0 <= hours <= 23, "hours must be 0-23"
+        assert 0 <= minutes <= 59, "minutes must be 0-59"
 
         return Time(hours, minutes)
     
     def __init__(self, t1:Time|str, t2:Time|str=None):
         if type(t1) == str:
             t1 = self._str_to_time(t1)
-        assert type(t1) == Time
+        assert type(t1) == Time, "type checking"
             
         if type(t2) == str:
             t2 = self._str_to_time(t1)
-        assert type(t2) == Time
+        assert type(t2) == Time or t2 == None, "type checking"
         
         self.start_time = t1
         self.end_time = t2 if t2 is not None else t1
@@ -100,7 +99,7 @@ class DateRange:
     def _str_to_date(string: str) -> Date:
         
         split_slash = string.count("/")
-        assert 0 <= split_slash <= 2
+        assert 0 <= split_slash <= 2, "full dates have a maximum of 2 slashes (ex. 12/31/2026)"
         
         if split_slash > 0:
             # mm/dd[/yyyy]
@@ -114,7 +113,7 @@ class DateRange:
         else: # words, ex. "jan 1 [2026]"
             num_items = len(string.split())
             
-            assert 2 <= num_items <= 3
+            assert 2 <= num_items <= 3, "full dates hav a maximum of 3 words (ex. dec 31 2026) "
             
             if num_items == 3:
                 month, day, year = string.split()
@@ -140,9 +139,9 @@ class DateRange:
         day = int(day)
         year = int(year)
         
-        assert type(month) == int and 1 <= month <= 12
-        assert type(day) == int and 1 <= day <= 31
-        assert type(year) == int
+        assert type(month) == int and 1 <= month <= 12, "type checking, value checking"
+        assert type(day) == int and 1 <= day <= 31, "type checking, value checking"
+        assert type(year) == int, "type checking"
         
         return Date(year, month, day)
             
@@ -150,11 +149,11 @@ class DateRange:
     def __init__(self, d1:Date|str, d2:Date|str=None):
         if type(d1) == str:
             d1 = self._str_to_date(d1)
-        assert type(d1) == Date
+        assert type(d1) == Date, "type checking"
             
         if type(d2) == str:
             d2 = self._str_to_date(d2)
-        assert type(d2) == Date or d2 == None
+        assert type(d2) == Date or d2 == None, "type checking"
         
         self.start_date = d1
         self.end_date = d2 if d2 is not None else d1
@@ -195,16 +194,37 @@ class RepeatCycle():
     
     @staticmethod
     def _str_to_days(string: str) -> Set[Day]:
-        pass
+        # single-letter: "mtwrfsu"
+        assert len(string) <= 7, "there are only 7 days in a week"
+        assert string.find(" ") == -1, "no spaces between the specified weekdays"
+        
+        s: Set[Day] = set()
+        
+        for char in string:
+            match char:
+                case 'm': s.add(Day.M)
+                case 't': s.add(Day.T)
+                case 'w': s.add(Day.W)
+                case 'r': s.add(Day.R)
+                case 'f': s.add(Day.F)
+                case 's': s.add(Day.S)
+                case 'u': s.add(Day.U)
+                case default: assert False, "days in cycle week specification must be m/t/w/r/f/s/u"
+        
+        return s
 
     @staticmethod
     def _str_to_dates(string: str) -> Set[Date]:
-        pass
+        # format: [month]/[day] separated by spaces
+        s: Set[Date] = set()
+        for date in string.split():
+            s.add(DateRange._str_to_date(date))
+        return s
     
     def __init__(self, timespan:TimeType|str, days: Set[Date]|Set[Day]|str):
         if type(timespan) == str:
             timespan = self._str_to_time_type(timespan)
-        assert type(timespan) == TimeType
+        assert type(timespan) == TimeType, "type checking"
         
         if type(days) == str:
             if timespan == TimeType.DAY:
@@ -213,27 +233,27 @@ class RepeatCycle():
                 days = self._str_to_days(days)
             else:
                 days = self._str_to_dates(days)
-        assert type(days) == Set[Day] or type(days) == Set[Date] or days == None
+        assert type(days) == set or days == None, "type checking"
         
         self.timespan = timespan
         self.days = days
 
     def __str__(self):
-        if self.type == TimeType.DAY:
+        if self.timespan == TimeType.DAY:
             return "every day"
-        elif self.type == TimeType.WEEK:
+        elif self.timespan == TimeType.WEEK:
             result = "every "
-            for day in self.set:
+            for day in self.days:
                 result += str(day)[4:7] + ", "
             return result[:-2]
-        elif self.type == TimeType.MONTH:
+        elif self.timespan == TimeType.MONTH:
             result = "every month on days "
-            for date in self.set:
+            for date in self.days:
                 result += str(date.day) + ", "
             return result[:-2]
-        else: # self.type == TimeType.YEAR
+        else: # self.timespan == TimeType.YEAR
             result = "every year on "
-            for date in self.set:
+            for date in self.days:
                 result += str(date)[5:] + ", "
             return result[:-2]
 
@@ -259,14 +279,14 @@ class RepeatDuration:
     def __init__(self, dur_type:DurationType|str, dur_value: int|Date|str):
         if type(dur_type) == str:
             dur_type = DurationType(dur_type)
-        assert type(dur_type) == DurationType
+        assert type(dur_type) == DurationType, "type checking"
         
         if type(dur_value) == str:
             match dur_type:
                 case DurationType.FOREVER: dur_value = None
-                case DurationType.NUM_TIMES: pass
+                case DurationType.NUM_TIMES: dur_value = int(dur_value)
                 case DurationType.UNTIL_DATE: dur_value = DateRange._str_to_date(dur_value)
-        assert type(dur_value) == int or type(dur_value) == Date or dur_value == None
+        assert type(dur_value) == int or type(dur_value) == Date or dur_value == None, "type checking"
         
         self.dur_type = dur_type
         self.value = dur_value
@@ -276,7 +296,7 @@ class RepeatDuration:
             case DurationType.FOREVER:
                 return "forever"
             case DurationType.NUM_TIMES:
-                return str(self.value[0]) + " time(s)"
+                return str(self.value) + " time(s)"
             case DurationType.UNTIL_DATE:
                 return "until " + str(self.value)
             case _:
@@ -295,15 +315,25 @@ class Repeat:
 
     def __init__(self, repeat:RepeatCycle|str, duration: RepeatDuration|str):
         if type(repeat) == str:
-            repeat = RepeatCycle(repeat)
-            assert type(repeat) == RepeatCycle
+            if repeat.count(" ") == 0:
+                repeat = RepeatCycle(repeat, None)
+            else:
+                repeat = RepeatCycle(repeat[0:repeat.find(" ")], repeat[repeat.find(" ")+1:])
+            
+            assert type(repeat) == RepeatCycle, "type checking"
             
         if type(duration) == str:
-            duration = RepeatDuration(duration)
-            assert type(duration) == RepeatDuration
+            if duration.count(" ") == 0:
+                duration = RepeatDuration(duration, None)
+            else:
+                duration = RepeatDuration(*duration.split())
+            assert type(duration) == RepeatDuration, "type checking"
         
         self.cycle = repeat
         self.duration = duration
+        
+    def __str__(self):
+        return "repeat: " + str(self.cycle) + ", " + str(self.duration)
     
 
 class NotifTime():
@@ -317,7 +347,7 @@ class NotifTime():
     
     def __init__(self, num:int, type:TimeType=TimeType.MINUTE):
         
-        assert num >= 0
+        assert num >= 0, "cannot have negative number of notif timespans"
         
         self.num_timespans = num
         self.timespan_type = type
@@ -499,14 +529,3 @@ class CalendarEvent():
         result += "\tdur: " + str(self.repeat.duration) + "\n"
         
         return result
-    
-    
-# test individual parts
-
-dates = DateRange("5/23")
-times = TimeRange("10:30a")
-repeat = Repeat("week m w f, until 6/3")
-
-print(dates)
-print(times)
-print(repeat)
