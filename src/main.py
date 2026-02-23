@@ -33,7 +33,6 @@ class Voice(Screen): pass
 
 class Scanner(Screen):
     def on_enter(self):
-        
         self.ids.cam_view.ids.camera.play = True
 
     def on_leave(self):

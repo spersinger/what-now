@@ -4,6 +4,10 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
 from kivy.properties import StringProperty
+from kivy.uix.filechooser import FileChooserIconView
+
+class ThemedFileChooserIconView(FileChooserIconView):
+    pass
 
 class NavButton(Button):
     screen_name = StringProperty("")

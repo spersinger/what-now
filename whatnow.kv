@@ -179,15 +179,17 @@
 
     BoxLayout:
         size_hint_y: None
+        orientation: "vertical"
         height: '48dp'
         anchor_x: 'center'
         anchor_y: 'center'
         spacing: 10
+        padding: 10
 
         PrimaryButton:
             id: scan_button
             text: '[b]Scan[/b]'
-            size_hint_x: 0.25
+            size_hint_x: 1
             size_hint_y: None
             height: '48dp'
             on_press: root.capture()
@@ -196,11 +198,11 @@
         PrimaryButton:
             id: upload_button
             text: '[b]Upload[/b]'
-            size_hint_x: 0.25
+            size_hint_x: 1
             size_hint_y: None
             height: '48dp'
             on_press: root.upload()
-            disabled: True
+            disabled: False
 
 
 <Home>:
