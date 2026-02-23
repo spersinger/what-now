@@ -1,10 +1,3 @@
-from kivy.config import Config
-Config.set('kivy', 'camera', 'opencv')
-Config.set('graphics', 'resizable', '0')
-Config.set('graphics', 'width', '360')
-Config.set('graphics', 'height', '640')
-Config.set('kivy', 'keyboard_mode', 'system')
-
 try:
     from kivy.app import App
 except ModuleNotFoundError:
@@ -18,6 +11,7 @@ from kivy.uix.textinput import TextInput
 
 from kivy.core.window import Window
 from kivy.lang import Builder
+from kivy.config import Config
 
 Builder.load_file('../whatnow.kv')
 
@@ -30,8 +24,10 @@ from Voice import Voice
 Window.size = (440,946)
 Config.set('kivy', 'camera', 'opencv')
 Config.set('graphics', 'resizable', '0')
-Config.set('graphics', 'width', '440')
-Config.set('graphics', 'height', '946')
+Config.set('graphics', 'width', '360')
+Config.set('graphics', 'height', '640')
+Config.set('kivy', 'keyboard_mode', 'system')
+
 
 # global data objects: schedule, command interpreter
 user_schedule = Schedule()

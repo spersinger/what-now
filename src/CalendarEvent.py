@@ -47,9 +47,41 @@ class TimeRange:
     start_time: Time
     end_time: Time
     
-    def __init__(self, t1:Time, t2:Time):
+    @staticmethod
+    def _str_to_time(string: str) -> Time:
+        hours, minutes = string.split(":")
+        assert len(minutes) == 3
+        
+        ampm = minutes[-1]
+        assert ampm == 'a' or ampm == 'p'
+        
+        minutes = int(minutes[:-1])
+        hours = int(hours)
+        assert type(hours) == int
+        assert type(minutes) == int
+        
+        if hours == 12:
+            if ampm == 'a': hours -= 12 # 12am; 00:00
+            else: pass # 12pm; 12:00 (do nothing)
+        else:
+            if ampm == 'p': hours += 12 # ex. 1:00p -> 13:00
+            
+        assert 0 <= hours <= 23
+        assert 0 <= minutes <= 59
+
+        return Time(hours, minutes)
+    
+    def __init__(self, t1:Time|str, t2:Time|str=None):
+        if type(t1) == str:
+            t1 = self._str_to_time(t1)
+        assert type(t1) == Time
+            
+        if type(t2) == str:
+            t2 = self._str_to_time(t1)
+        assert type(t2) == Time
+        
         self.start_time = t1
-        self.end_time = t2
+        self.end_time = t2 if t2 is not None else t1
         
     def __str__(self):
         return str(self.start_time) + " -> " + str(self.end_time)
@@ -64,10 +96,68 @@ class DateRange:
     start_date: Date
     end_date: Date
     
-    def __init__(self, d1:Date, d2:Date):
+    @staticmethod
+    def _str_to_date(string: str) -> Date:
+        
+        split_slash = string.count("/")
+        assert 0 <= split_slash <= 2
+        
+        if split_slash > 0:
+            # mm/dd[/yyyy]
+            
+            if split_slash == 2:
+                month, day, year = string.split("/")
+            else:
+                month, day = string.split("/")
+                year = Date.today().year
+        
+        else: # words, ex. "jan 1 [2026]"
+            num_items = len(string.split())
+            
+            assert 2 <= num_items <= 3
+            
+            if num_items == 3:
+                month, day, year = string.split()
+            else: # num_items == 2
+                year = Date.today().year
+                month, day = string.split()
+            
+            match month.lower():
+                case "jan": month = 1
+                case "feb": month = 2
+                case "mar": month = 3
+                case "apr": month = 4
+                case "may": month = 5
+                case "jun": month = 6
+                case "jul": month = 7
+                case "aug": month = 8
+                case "sep": month = 9
+                case "oct": month = 10
+                case "nov": month = 11
+                case "dec": month = 12
+            
+        month = int(month)
+        day = int(day)
+        year = int(year)
+        
+        assert type(month) == int and 1 <= month <= 12
+        assert type(day) == int and 1 <= day <= 31
+        assert type(year) == int
+        
+        return Date(year, month, day)
+            
+    
+    def __init__(self, d1:Date|str, d2:Date|str=None):
+        if type(d1) == str:
+            d1 = self._str_to_date(d1)
+        assert type(d1) == Date
+            
+        if type(d2) == str:
+            d2 = self._str_to_date(d2)
+        assert type(d2) == Date or d2 == None
+        
         self.start_date = d1
-        self.end_date = d2
-
+        self.end_date = d2 if d2 is not None else d1
     
     def __str__(self):
         return str(self.start_date) + " -> " + str(self.end_date)
@@ -88,16 +178,46 @@ class Semesters:
 class RepeatCycle():
     """specifies how an event repeats."""
     
-    type: TimeType
+    timespan: TimeType
     """by what timespan to repeat (daily, weekly, monthly, or yearly)"""
     
-    set: Set[Date] | Set[Day]
+    days: Set[Date] | Set[Day]
     """which specific days (weekly) or dates (monthly/yearly) to repeat on"""
     
-    def __init__(self, type:TimeType, set: Set[Date] | Set[Day]):
-        self.type = type
-        self.set = set
+    @staticmethod
+    def _str_to_time_type(string: str) -> TimeType:
+        match string.lower():
+            case "day": return TimeType.DAY
+            case "week": return TimeType.WEEK
+            case "month": return TimeType.MONTH
+            case "year": return TimeType.YEAR
+            case default: raise ValueError("invalid cycle type string")
     
+    @staticmethod
+    def _str_to_days(string: str) -> Set[Day]:
+        pass
+
+    @staticmethod
+    def _str_to_dates(string: str) -> Set[Date]:
+        pass
+    
+    def __init__(self, timespan:TimeType|str, days: Set[Date]|Set[Day]|str):
+        if type(timespan) == str:
+            timespan = self._str_to_time_type(timespan)
+        assert type(timespan) == TimeType
+        
+        if type(days) == str:
+            if timespan == TimeType.DAY:
+                days = None
+            elif timespan == TimeType.WEEK:
+                days = self._str_to_days(days)
+            else:
+                days = self._str_to_dates(days)
+        assert type(days) == Set[Day] or type(days) == Set[Date] or days == None
+        
+        self.timespan = timespan
+        self.days = days
+
     def __str__(self):
         if self.type == TimeType.DAY:
             return "every day"
@@ -133,12 +253,23 @@ class RepeatDuration:
     dur_type: DurationType
     """type of duration (forever, number of times, or until specific date)"""
     
-    value: Tuple[int, Date] | Date | None
+    value: int | Date
     """how many times or what date until"""
     
-    def __init__(self, type:DurationType, value: Tuple[int, Date] | Date | None):
-        self.dur_type = type
-        self.value = value
+    def __init__(self, dur_type:DurationType|str, dur_value: int|Date|str):
+        if type(dur_type) == str:
+            dur_type = DurationType(dur_type)
+        assert type(dur_type) == DurationType
+        
+        if type(dur_value) == str:
+            match dur_type:
+                case DurationType.FOREVER: dur_value = None
+                case DurationType.NUM_TIMES: pass
+                case DurationType.UNTIL_DATE: dur_value = DateRange._str_to_date(dur_value)
+        assert type(dur_value) == int or type(dur_value) == Date or dur_value == None
+        
+        self.dur_type = dur_type
+        self.value = dur_value
         
     def __str__(self):
         match self.dur_type:
@@ -161,22 +292,21 @@ class Repeat:
     
     duration: RepeatDuration
     """how long the event repeats for"""
-    
-    # 2 halves: cycle, duration
-    # cycle: ("day" | "week [mtwrf]" | "month 13 31" | "year 1/13 4/4")
-    # duration: ("forever" | "n times" | "until 1/13/26")
-    def __init__(self, repeat:str):
-        pass
 
-    def __init__(self, repeat: Tuple[str]):
-        pass
-    
-    def __init__(self, repeat:RepeatCycle, duration: RepeatDuration):
+    def __init__(self, repeat:RepeatCycle|str, duration: RepeatDuration|str):
+        if type(repeat) == str:
+            repeat = RepeatCycle(repeat)
+            assert type(repeat) == RepeatCycle
+            
+        if type(duration) == str:
+            duration = RepeatDuration(duration)
+            assert type(duration) == RepeatDuration
+        
         self.cycle = repeat
         self.duration = duration
     
 
-class NotificationTime():
+class NotifTime():
     """how long before an event to send a notification."""
     
     timespan_type: TimeType
@@ -185,37 +315,10 @@ class NotificationTime():
     num_timespans: int
     """number of time denominations"""
     
-    def __init__(self, time: str):
-        """initialize via a string. Example: \"10 hours\""""
-        # parse number
-        num, type = time.lower().split()
-        
-        # convert num to number
-        num = int(num)
-        
-        # convert type to TimeType
-        match type[:2]:
-            case "mi":
-                type = TimeType.MINUTE
-            case "ho":
-                type = TimeType.HOUR
-            case "da":
-                type = TimeType.DAY
-            case "mo":
-                type = TimeType.MONTH
-            case "ye":
-                type = TimeType.YEAR
-            case _: 
-                print("error: invalid notification time type. defaulting to minutes")
-                type = TimeType.MINUTE
-                
-        # set values
-        self.num_timespans = num
-        self.timespan_type = type
-                
-    
     def __init__(self, num:int, type:TimeType=TimeType.MINUTE):
-        if(num < 0): raise ValueError("Number of timespans must be non-negative.")
+        
+        assert num >= 0
+        
         self.num_timespans = num
         self.timespan_type = type
         
@@ -246,7 +349,7 @@ class CalendarEvent():
     
     name: str
     description: str
-    notification_times: List[NotificationTime]
+    notification_times: List[NotifTime]
     """list of times by which to send out a notification."""
     
     date_range: DateRange
@@ -258,46 +361,12 @@ class CalendarEvent():
     repeat: Repeat
     """how and how long by which the event repeats"""
     
-    # initialize using strings
-    def __init__(
-        self,
-        name: str,
-        desc: str,
-        notifs: Tuple[str] | str,
-        dates: Tuple[str] | str,
-        times: Tuple[str] | str,
-        repeat: str
-    ):
-        self.name = name
-        self.desc = desc
-        
-        # can have tuple of notifs or just one
-        if type(notifs) == Tuple[str]:
-            for notif in notifs:
-                self.notification_times.append(NotificationTime(notif))
-        else: # type(notifs) == str
-            self.notification_times = [NotificationTime(notifs)]
-        
-        # can have 1 or 2 dates (if 1, duplicate)
-        if type(dates) == Tuple[str]:
-            self.date_range = DateRange(dates[0], dates[1])
-        else: # type(dates) == str
-            self.date_range = DateRange(dates)
-        
-        # same for times
-        if type(times) == Tuple[str]:
-            self.time_range = TimeRange(times[0], times[1])
-        else: # type(times) == str
-            self.time_range = TimeRange(times)
-            
-        self.repeat = Repeat(repeat)
-    
     # initialize using full types
     def __init__(
         self, 
         name:str, 
         desc:str, 
-        notifs:List[NotificationTime]|None,
+        notifs:List[NotifTime]|None,
         dates: DateRange,
         times: TimeRange,
         repeat: Repeat
@@ -392,28 +461,8 @@ class CalendarEvent():
                 )
 
             case DurationType.NUM_TIMES:
-                num_repeats = self.repeat.duration.value[0]
-                original_date: Date = self.repeat.duration.value[1]
-                
-                # emulate original event to calculate last date with
-                copy: CalendarEvent = deepcopy(self)
-                copy.date_range.start_date = original_date
-                
-                # calculate the date of the last event
-                for i in range(num_repeats):
-                    copy.date_range.start_date = get_next_cycle_date(copy)
-                    
-                last_date = copy.date_range.start_date
-                
-                # if current date is before last date, can safely return next iteration date
-                if self.date_range.start_date < last_date:
-                    difference = get_next_cycle_date(self) - self.date_range.start_date
-                    return DateRange(
-                        self.date_range.start_date + difference,
-                        self.date_range.end_date + difference
-                    )
-                else:
-                    return None
+                # handled by Schedule (can't get last event iteratively (without original date))
+                pass
                 
 
             case DurationType.UNTIL_DATE:
@@ -450,3 +499,14 @@ class CalendarEvent():
         result += "\tdur: " + str(self.repeat.duration) + "\n"
         
         return result
+    
+    
+# test individual parts
+
+dates = DateRange("5/23")
+times = TimeRange("10:30a")
+repeat = Repeat("week m w f, until 6/3")
+
+print(dates)
+print(times)
+print(repeat)

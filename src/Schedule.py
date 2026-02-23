@@ -1,6 +1,7 @@
 from CalendarEvent import *
 from typing import List
 from Command import Command, Response, CommandType
+from copy import deepcopy
 
 # contains all of a user's events
 # purpose: manage calendar events
@@ -19,12 +20,17 @@ class Schedule():
         
         # create group to hold event(s)
         group: List[CalendarEvent] = []
+        num_repeats = -1
         
         # add any recurrences of the event to the group (do while)
+        # (handle num_events duration case separately here)
         while True:
             group.append(deepcopy(event))
+            num_repeats += 1
             event.date_range = event.get_next_occurrence_dates()
             if event.is_last_occurrence():
+                break
+            if event.repeat.duration.dur_type == DurationType.NUM_TIMES and num_repeats == event.repeat.duration.value:
                 break
         
         # append the group to the group list
@@ -71,7 +77,7 @@ class Schedule():
         event = CalendarEvent(
             "not senior project 2",
             "aoeusnth aoeusnth aoeusnth aoeusnth",
-            [NotificationTime(5)],
+            [NotifTime(5)],
             DateRange(Date(2026, 2, 16), Date(2026, 2, 16)),
             TimeRange(Time(14), Time(15)),
             Repeat(
@@ -84,7 +90,7 @@ class Schedule():
         
         event.name = "irresponsible computing"
         event.description = "they teach you to be evil"
-        event.notification_times = [NotificationTime(30, TimeType.HOUR), NotificationTime(1)]
+        event.notification_times = [NotifTime(30, TimeType.HOUR), NotifTime(1)]
         event.date_range = DateRange(Date(2026, 2, 28), Date(2026, 3, 1))
         event.repeat.duration = RepeatDuration(DurationType.UNTIL_DATE, Date(2026, 5, 17))
         
