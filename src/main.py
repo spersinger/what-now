@@ -20,7 +20,11 @@ from kivy.core.window import Window
 from kivy.lang import Builder
 from ui import *
 
-Builder.load_file('../whatnow.kv')
+Builder.load_file('../ui/themed.kv')
+Builder.load_file('../ui/home_page.kv')
+Builder.load_file('../ui/voice_page.kv')
+Builder.load_file('../ui/scanner_page.kv')
+Builder.load_file('../ui/whatnow.kv')
 
 
 # custom classes from other source files
