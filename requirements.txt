@@ -1,3 +1,4 @@
+altgraph==0.17.5
 audioop-lts==0.2.2
 certifi==2026.1.4
 charset-normalizer==3.4.4
@@ -16,8 +17,11 @@ packaging==26.0
 pillow==10.4.0
 PyAudio==0.2.14
 Pygments==2.19.2
+pyinstaller==6.19.0
+pyinstaller-hooks-contrib==2026.1
 pytesseract==0.3.13
 requests==2.32.5
+setuptools==82.0.0
 SpeechRecognition==3.14.5
 standard-aifc==3.13.0
 standard-chunk==3.13.0
