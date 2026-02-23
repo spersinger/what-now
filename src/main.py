@@ -15,18 +15,22 @@ from kivy.config import Config
 
 Builder.load_file('../whatnow.kv')
 
-
-from CalendarEvent import CalendarEvent
-from Schedule import Schedule
-from Command import CommandInterpreter
-from Voice import Voice
-
-Window.size = (440,946)
 Config.set('kivy', 'camera', 'opencv')
 Config.set('graphics', 'resizable', '0')
 Config.set('graphics', 'width', '360')
 Config.set('graphics', 'height', '640')
 Config.set('kivy', 'keyboard_mode', 'system')
+
+# For fixing multitouch
+Config.remove_option('input', '%(name)s')
+Config.set('input', 'mouse', 'mouse')
+
+# custom class imports
+from CalendarEvent import CalendarEvent
+from Schedule import Schedule
+from Command import CommandInterpreter
+from Voice import Voice
+from document_scanner import DocumentScanner
 
 
 # global data objects: schedule, command interpreter
@@ -34,7 +38,7 @@ user_schedule = Schedule()
 command_interpreter = CommandInterpreter()
 
 class Home(Screen): pass
-
+class Voice(Screen): pass
 
 class Scanner(Screen):
     def on_enter(self):
@@ -44,20 +48,7 @@ class Scanner(Screen):
         self.ids.cam_view.ids.camera.play = False
 
 class Edit(Screen): pass
-
-class Root(BoxLayout):
-    pass
-
-
-class CameraClick(BoxLayout):
-
-    def capture(self):
-        print("Captured todo")
-    def upload(self):
-        '''
-        Function to upload images from a camera roll or desktop
-        '''
-        print("Upload todo")
+class Root(BoxLayout): pass
 
 
 class WhatNow(App):
