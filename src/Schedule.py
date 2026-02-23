@@ -11,9 +11,14 @@ class Schedule():
     def __init__(self):
         self.events = []
         
-    # returns a list of best matches for the given input
+    # returns a list of best matches for the given input (matches include indices)
     # search by name, date, 
-    def search_events(self, name:str=None, ) -> List[CalendarEvent]:
+    def search_events(self, name:str=None, ) -> List[Tuple[CalendarEvent, int, int]]:
+        pass
+    
+    # returns the group and individual indices of a specific event
+    # all parameters must match
+    def get_event_indices(self, event:CalendarEvent) -> Tuple[int,int]:
         pass
     
     def add_event(self, event:CalendarEvent):
@@ -35,36 +40,37 @@ class Schedule():
         
         # append the group to the group list
         self.events.append(group)
+    
+    def delete_single_event(self, group:int, event:int):
+        pass
+    
+    def delete_event_group(self, index:int):
+        pass
+
+    def modify_event(self, event:CalendarEvent, new_event: CalendarEvent):
+        pass
 
             
     
     # performs the tasks set by the command
     # ex. create/modify/delete event
     def perform_command(self, command:Command) -> Response:
-        response: Response = Response(command.id)
-        
-        if command.type == CommandType.ADD:
-            raise ValueError("seriously wtf is this")
-        
-        match command.type:
-            case CommandType.SEARCH:
+        response = Response(command.id)
+    
+        # yeah whatever we have to do this instead of 
+        # just using the enums like it should be
+        match command.c_type.name:
+            case "SEARCH":
                 pass
-            case CommandType.EDIT:
+            case "EDIT":
                 pass
-            case CommandType.ADD: # ???????????????????????????????????????
-                # for SOME reason
-                # during testing, when command.type is set to CommandType.ADD
-                # IT DOESNT MATCH HERE
-                # glad the rest seems to work ig but like wtf
-                # ive verified it in so many ways, i have a breakpoint here
-                # and it says exactly that the command type is what i think it is
+            case "ADD":
                 self.add_event(command.event)
                 response.status_details = "event was added to calendar."
-            case CommandType.DELETE:
+            case "DELETE":
                 pass
             case _:
-                self.add_event(command.event)
-                response.status_details = "event was added to calendar."
+                print("not supposed to happen")
         
         return response
         

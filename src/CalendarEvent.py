@@ -76,7 +76,7 @@ class TimeRange:
         assert type(t1) == Time, "type checking"
             
         if type(t2) == str:
-            t2 = self._str_to_time(t1)
+            t2 = self._str_to_time(t2)
         assert type(t2) == Time or t2 == None, "type checking"
         
         self.start_time = t1
@@ -418,14 +418,14 @@ class CalendarEvent():
             event_start: Date = event.date_range.start_date
             delta_day = timedelta(1) # time delta for incrementing days
             
-            match event.repeat.cycle.type:
+            match event.repeat.cycle.timespan:
                 case TimeType.DAY: # repeat every day
                     return event_start + delta_day
 
                 case TimeType.WEEK: # repeat specific days per week
                     # translate date to weekday value
                     day = Day((event_start + delta_day).weekday())
-                    while day not in event.repeat.cycle.set:
+                    while day not in event.repeat.cycle.days:
                         delta_day = timedelta(delta_day.days + 1)
                         day = Day((event_start + delta_day).weekday())
                     return event_start + delta_day

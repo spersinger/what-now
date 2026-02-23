@@ -12,18 +12,19 @@ class CommandType(Enum):
 
 # command
 # holds information about one request to send to the schedule.
+# TODO: figure out how modifying events works
 class Command:
     """Holds information about an event and what to do with it."""
     
     id: int # unique to each command
     sent: bool # whether it has been sent to schedule or not
-    type: CommandType
+    c_type: CommandType
     event: CalendarEvent
     
-    def __init__(self, id:int, type:CommandType, event:CalendarEvent):
+    def __init__(self, id:int, c_type:CommandType, event:CalendarEvent):
         self.id = id
         self.sent = False
-        self.type = type
+        self.c_type = c_type
         self.event = event
     
     
@@ -40,12 +41,13 @@ class Response:
     command_id: int
     status: StatusCode
     status_details: str
-    # data: Tuple[int] # TODO: figure out
+    data = None
     
     def __init__(self, id:int):
         self.command_id = id
         self.status = StatusCode.SUCCESS
         self.status_details = ""
+        self.data = None
     
     
     
@@ -86,7 +88,7 @@ class CommandInterpreter:
             return
 
         # search, edit, add, delete
-        match command.type:
+        match command.c_type:
             case CommandType.SEARCH:
                 pass
             case CommandType.EDIT:
