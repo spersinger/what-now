@@ -1,6 +1,6 @@
 from CalendarEvent import *
 from typing import List
-from Command import Command, Response, CommandType
+from Command import Command, Response, CommandType, StatusCode
 from copy import deepcopy
 from difflib import SequenceMatcher
 
@@ -11,6 +11,8 @@ class Schedule():
     
     def __init__(self):
         self.events = []
+        
+        
         
     # returns a list of close matches for the given input (matches include indices)
     # search by name and optional date
@@ -45,6 +47,8 @@ class Schedule():
                 if event == ev: return (g_idx, e_idx)
         return None
     
+    
+    
     def add_event(self, event:CalendarEvent):
         
         # create group to hold event(s)
@@ -67,6 +71,8 @@ class Schedule():
         # append the group to the group list
         self.events.append(group)
     
+    
+    
     # leave index None to delete whole group
     def delete_event(self, group:int, index:int=None):
         if index is None:
@@ -76,8 +82,11 @@ class Schedule():
             # delete single event
             del self.events[group][index]
 
+
+
     # leave index None to modify whole group
     # (just deletes and creates a new series if group only)
+    # TODO: add error handling
     def modify_event(self, new_event: CalendarEvent, group:int, index:int=None):
         if index is None:
             # replace whole group
@@ -98,39 +107,46 @@ class Schedule():
         # just using the enums like it should be
         match command.c_type.name:
             case "SEARCH":
-                pass
+                # search based on command's calendarevent
+                # TODO: test
+                response.data = self.get_event_indices(command.event)
+                if response.data is not None:
+                    response.status = StatusCode.SUCCESS
+                    response.status_details = "found matching event."
+                else:
+                    response.status = StatusCode.ERROR
+                    response.status_details = "could not find matching event."
+
             case "EDIT":
-                pass
+                # modify event based on command
+                # (command.event: new event)
+                # TODO: test, error handling
+                self.modify_event(command.event, *command.event_indices)
+                if True: # will be changed later
+                    response.status = StatusCode.SUCCESS
+                    response.status_details = "successfully modified event."
+                else:
+                    response.status = StatusCode.ERROR
+                    response.status_details = "error trying to modify event."
+
             case "ADD":
+                # todo: error handling
                 self.add_event(command.event)
+                response.status = StatusCode.SUCCESS
                 response.status_details = "event was added to calendar."
+
+            # use incides to delete
             case "DELETE":
-                pass
+                self.delete_event(*command.event_indices)
+                # TODO: add error handling
+
             case _:
                 print("not supposed to happen")
         
         return response
         
-    
-    
-    # TESTING: 
-    # add some manual data to the schedule
-    def TEST_SET_SCHEDULE(self):
         
         
-        # should be: 17 19 24 26 3 5
-        event = CalendarEvent(
-            "not senior project 2",
-            "aoeusnth aoeusnth aoeusnth aoeusnth",
-            [NotifTime(5)],
-            DateRange("2/17", "2/18"),
-            TimeRange("2:00p", "2:50p"),
-            Repeat("week tr", "until 3/5")
-        )
-        
-        self.add_event(event)
-        
-    # TESTING: prints the schedule to the console
     def __str__(self):
         result: str = ""
         for group in self.events:

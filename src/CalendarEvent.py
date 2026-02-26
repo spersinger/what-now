@@ -14,6 +14,8 @@ class TimeType(Enum):
     MONTH = "month(s)"
     YEAR = "year(s)"
 
+
+
 class Day(Enum):
     """
     represents a weekday.
@@ -32,6 +34,8 @@ class Day(Enum):
     FRIDAY    = FRI = F = 4
     SATURDAY  = SAT = S = 5
     SUNDAY    = SUN = U = 6
+
+
 
 # holds a single range of times
 class TimeRange:
@@ -84,6 +88,8 @@ class TimeRange:
         
     def __str__(self):
         return str(self.start_time) + " -> " + str(self.end_time)
+
+
 
 # class that holds a range of dates
 class DateRange:
@@ -165,9 +171,13 @@ class DateRange:
     def __str__(self):
         return str(self.start_date) + " -> " + str(self.end_date)
     
+    
+    
 # class to hold semester start/end dates
 class Semesters:
     terms: Dict # {str, DateRange}
+
+
 
 # specifies amount of repeats.
 # type: one of:
@@ -261,6 +271,8 @@ class RepeatCycle():
                 result += str(date)[5:] + ", "
             return result[:-2]
 
+
+
 class DurationType(Enum):
     """
     type of repeat duration.
@@ -270,6 +282,8 @@ class DurationType(Enum):
     FOREVER = "forever"
     NUM_TIMES = "times"
     UNTIL_DATE = "until"
+
+
 
 class RepeatDuration:
     """repeat duration and amount."""
@@ -309,6 +323,7 @@ class RepeatDuration:
                 return "ERRORRRRRRRR"
             
 
+
 class Repeat:
     """repeat data for an event."""
     
@@ -340,6 +355,7 @@ class Repeat:
     def __str__(self):
         return "repeat: " + str(self.cycle) + ", " + str(self.duration)
     
+    
 
 class NotifTime():
     """how long before an event to send a notification."""
@@ -364,6 +380,7 @@ class NotifTime():
         
     def __str__(self):
         return str(self.num_timespans) + " " + self.timespan_type.value
+
 
 
 # represents a calendar event, possibly repeating
@@ -513,3 +530,6 @@ class CalendarEvent():
         result += "\tdur: " + str(self.repeat.duration) + "\n"
         
         return result
+    
+    
+# TODO: wayyy more try/except error handling (replace asserts)

@@ -2,6 +2,8 @@ from CalendarEvent import CalendarEvent
 from enum import Enum
 from typing import Tuple, List
 
+
+
 class CommandType(Enum):
     """Represents the different functions a Command can process."""
     
@@ -9,6 +11,8 @@ class CommandType(Enum):
     EDIT = 1
     ADD = 2
     DELETE = 3
+
+
 
 # command
 # holds information about one request to send to the schedule.
@@ -30,10 +34,13 @@ class Command:
         self.event_indices = indices
     
     
+    
 # a status code from the schedule
 class StatusCode(Enum):
     SUCCESS = 0
     ERROR = 0
+    
+    
     
 # response
 # holds information returned by schedule
