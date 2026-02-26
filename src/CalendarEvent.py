@@ -95,6 +95,10 @@ class DateRange:
     start_date: Date
     end_date: Date
     
+    # returns whether a certain date is within the range
+    def contains_date(self, date:Date):
+        return self.start_date <= date <= self.end_date        
+    
     @staticmethod
     def _str_to_date(string: str) -> Date:
         
@@ -283,10 +287,11 @@ class RepeatDuration:
         
         if type(dur_value) == str:
             match dur_type:
-                case DurationType.FOREVER: dur_value = None
+                case DurationType.FOREVER: dur_value = 500 # can't actually have forever
                 case DurationType.NUM_TIMES: dur_value = int(dur_value)
                 case DurationType.UNTIL_DATE: dur_value = DateRange._str_to_date(dur_value)
-        assert type(dur_value) == int or type(dur_value) == Date or dur_value == None, "type checking"
+        if dur_value == None: dur_value = 500
+        assert type(dur_value) == int or type(dur_value) == Date, "type checking"
         
         self.dur_type = dur_type
         self.value = dur_value
@@ -362,18 +367,6 @@ class NotifTime():
 
 
 # represents a calendar event, possibly repeating
-# TODO: simplify? allow data to be set with strings for convenience
-#       - notif_times: string* (0 or more) ex. "1 hour", "3 minutes"
-#       - date_range: 
-#           - tuple(Date, Date) ex. (Date(2026, 12, 23), Date(2026, 12, 24))
-#           - Date (same start/end date)
-#           - string+ (1 or 2) ex. "12/23", "12/24" ("mm/dd/yyyy" only)
-#       - time_range:
-#           - tuple(Time, Time)
-#           - Time (same start/end time)
-#           - string+ (1 or 2) ex. "13:00", "13:50"
-#       - repeat:
-#           - string ex. "every 2 days" or "every week umtwrfs" or "every month 12,13,14" or "every year 12/13,12/14,12/15"
 class CalendarEvent():
     """represents a single calendar event."""
     
@@ -482,18 +475,13 @@ class CalendarEvent():
         # duration: forever, num times, until_date
         # for each type, get the next event based on cycle
         match self.repeat.duration.dur_type:
-            case DurationType.FOREVER:
+            case DurationType.FOREVER | DurationType.NUM_TIMES:
                 # there will always be a next event
-                difference = self.date_range.start_date - get_next_cycle_date(self)
+                difference = get_next_cycle_date(self) - self.date_range.start_date
                 return DateRange(
                     self.date_range.start_date + difference,
                     self.date_range.end_date + difference
                 )
-
-            case DurationType.NUM_TIMES:
-                # handled by Schedule (can't get last event iteratively (without original date))
-                pass
-                
 
             case DurationType.UNTIL_DATE:
                 difference = get_next_cycle_date(self) - self.date_range.start_date
@@ -506,10 +494,6 @@ class CalendarEvent():
             
             case _:
                 print("error: invalid duration type")
-    
-    def is_last_occurrence(self) -> bool:
-        """if a repeating event, determine whether this one is the last occurrence."""
-        return self.get_next_occurrence_dates() == None
         
     # for printing
     def __str__(self):

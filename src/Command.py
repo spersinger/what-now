@@ -20,12 +20,14 @@ class Command:
     sent: bool # whether it has been sent to schedule or not
     c_type: CommandType
     event: CalendarEvent
+    event_indices: Tuple[int, int]
     
-    def __init__(self, id:int, c_type:CommandType, event:CalendarEvent):
+    def __init__(self, id:int, c_type:CommandType, event:CalendarEvent, indices:Tuple[int, int]=None):
         self.id = id
         self.sent = False
         self.c_type = c_type
         self.event = event
+        self.event_indices = indices
     
     
 # a status code from the schedule
