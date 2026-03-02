@@ -14,38 +14,41 @@ class Schedule():
         
         
         
-    # returns a list of close matches for the given input (matches include indices)
+    # returns the closest match;
     # search by name and optional date
-    def search_events(self, name:str, date:Date|str=None) -> List[Tuple[CalendarEvent, int, int]]:
-        if date is not None and type(date) == str:
-            date = DateRange._str_to_date(date)
+    def search_events(self, search_term:CalendarEvent) -> Tuple[CalendarEvent, int, int]:
+        name = search_term.name
+        date = search_term.date_range.start_date # start date: search term
         
-        matches: List[Tuple[CalendarEvent, int, int]] = list();
+        match: Tuple[CalendarEvent, int, int]
+        current_best: Tuple[float, bool] # closeness of name, whether date included
         
+        # if no date, assume search is for whole group
+        if search_term.date_range is None:
+            for g_idx, group in enumerate(self.events):
+                if group[0].name == search_term.name:
+                    return (group[0], g_idx, None)
+            
+        # otherwise, find best single event match
         for g_idx, group in enumerate(self.events):
             for e_idx, event in enumerate(group):
                 
+                # if search tearm contains nothing except name, return group index (event 0)
+                if search_term.date_range is None and search_term.name == event.name:
+                    return (self.events[g_idx][0], g_idx, None)
+                
                 # check items by precedence: name (calculate match), date
-                name_close = SequenceMatcher(None, name, event.name).ratio() >= 0.8
+                name_dist = SequenceMatcher(None, name, event.name).ratio() >= 0.8
                 if date is not None:
                     contains_date = event.date_range.contains_date(date)
                 else:
                     contains_date = True
                 
-                if name_close and contains_date:
-                    matches.append((event, g_idx, e_idx))
+                if name_dist > current_best[0] and not current_best[1]:
+                    current_best = (name_dist, contains_date)
+                    match = (event, g_idx, e_idx)
         
-        return matches
-                    
-                
-    
-    # returns the group and individual indices of a specific event
-    # all parameters must match
-    def get_event_indices(self, event:CalendarEvent) -> Tuple[int,int]:
-        for g_idx, group in enumerate(self.events):
-            for e_idx, ev in enumerate(group):
-                if event == ev: return (g_idx, e_idx)
-        return None
+        return match
     
     
     
@@ -86,14 +89,26 @@ class Schedule():
 
     # leave index None to modify whole group
     # (just deletes and creates a new series if group only)
-    # TODO: add error handling
-    def modify_event(self, new_event: CalendarEvent, group:int, index:int=None):
-        if index is None:
-            # replace whole group
+    def modify_event(self, mod:CalendarEvent, group:int, index:int=None):
+        
+        # get copy of first event recurrence
+        curr = deepcopy(self.events[group][0 if index is None else index]) # make sure we get an object, not a reference
+
+        new_event = mod
+        
+        # replacements
+        if new_event.name == None: new_event.name = curr.name
+        if new_event.description == None: new_event.description = curr.description
+        if new_event.notification_times == None: new_event.notification_times = curr.notification_times
+        
+        # more complicated replacements (dates, times, repeat)
+        
+        
+        # replace
+        if index is None: # whole group
             self.delete_event(group)
             self.add_event(new_event)
-        else:
-            # replace single event
+        else: # single event
             self.events[group][index] = new_event
 
             
@@ -107,9 +122,11 @@ class Schedule():
         # just using the enums like it should be
         match command.c_type.name:
             case "SEARCH":
+                # ensure correct command data
+                assert type(command.data) == CalendarEvent
+                
                 # search based on command's calendarevent
-                # TODO: test
-                response.data = self.get_event_indices(command.event)
+                response.data = self.search_events(command.event)
                 if response.data is not None:
                     response.status = StatusCode.SUCCESS
                     response.status_details = "found matching event."
@@ -118,27 +135,42 @@ class Schedule():
                     response.status_details = "could not find matching event."
 
             case "EDIT":
-                # modify event based on command
-                # (command.event: new event)
-                # TODO: test, error handling
-                self.modify_event(command.event, *command.event_indices)
-                if True: # will be changed later
-                    response.status = StatusCode.SUCCESS
-                    response.status_details = "successfully modified event."
-                else:
+                # ensure correct command data
+                assert type(command.data) == Tuple[CalendarEvent, CalendarEvent]
+                
+                # first: search based on first event (search terms)
+                response.data = self.search_events(command.data[0])
+                if response.data is None:
                     response.status = StatusCode.ERROR
-                    response.status_details = "error trying to modify event."
+                    response.status_details = "could not find matching event to modify."
+                else:
+                    response.status = StatusCode.SUCCESS
+                    response.status_details = "found matching event to modify."
+                    
+                    # second: modify event based on second event (modify by)
+                    self.modify_event(command.data[1], *response.data[1:])
 
             case "ADD":
-                # todo: error handling
+                # TODO: error handling?
                 self.add_event(command.event)
                 response.status = StatusCode.SUCCESS
                 response.status_details = "event was added to calendar."
 
             # use incides to delete
             case "DELETE":
-                self.delete_event(*command.event_indices)
-                # TODO: add error handling
+                
+                # ensure correct command data
+                assert type(command.data) == CalendarEvent
+                
+                # part 1: find event (or group) to delete
+                response.data = self.search_events(command.data)
+                if response.data is None:
+                    response.status = StatusCode.ERROR
+                    response.status_details = "could not find matching event(s) to delete."
+                else:
+                    response.status = StatusCode.SUCCESS
+                    response.status_details = "found event(s) to delete."
+                    self.delete_event(*(response.data[1:]))
 
             case _:
                 print("not supposed to happen")
@@ -157,3 +189,5 @@ class Schedule():
                 result += str(event) + "\n"
             
         return result
+    
+# TODO: try/except with error propogation instead of None/assert usage? (everywehre, not just this file)
