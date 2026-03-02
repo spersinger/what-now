@@ -51,8 +51,7 @@ class TimeRange:
         - cannot have "p" with hours >12
     
     String constructors:
-        - \[time]:
-            - r"1?[0-9]:[0-5][0-9][ap]"
+        - Time: r"1?[0-9]:[0-5][0-9][ap]"
     
     Notes:
         - if only one parameter is passed, both start and end will be set to it
@@ -116,7 +115,7 @@ class DateRange:
         - end_date cannot be before start_date
     
     String constructors:
-        - \[date]: 
+        - Date: 
             - r"1?[0-9]/[123]?[0-9]\(/[0-9]+)?"  (mm/dd(/yyyy))
             - r"(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec) [123]?[0-9] ([0-9]+)?"  (mmm dd( yyyy))
         
