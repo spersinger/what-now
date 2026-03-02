@@ -21,34 +21,30 @@ class Schedule():
         date = search_term.date_range.start_date # start date: search term
         
         match: Tuple[CalendarEvent, int, int]
-        current_best: Tuple[float, bool] # closeness of name, whether date included
         
         # if no date, assume search is for whole group
+        # TODO: necessary? figure out use case if so
         if search_term.date_range is None:
             for g_idx, group in enumerate(self.events):
                 if group[0].name == search_term.name:
                     return (group[0], g_idx, None)
             
-        # otherwise, find best single event match
+        # otherwise, find single event match
         for g_idx, group in enumerate(self.events):
             for e_idx, event in enumerate(group):
                 
+                name_close = SequenceMatcher(None, name, event.name).ratio() >= 0.8
+                
                 # if search tearm contains nothing except name, return group index (event 0)
-                if search_term.date_range is None and search_term.name == event.name:
+                if search_term.date_range is None and name_close:
                     return (self.events[g_idx][0], g_idx, None)
                 
-                # check items by precedence: name (calculate match), date
-                name_dist = SequenceMatcher(None, name, event.name).ratio() >= 0.8
-                if date is not None:
-                    contains_date = event.date_range.contains_date(date)
-                else:
-                    contains_date = True
-                
-                if name_dist > current_best[0] and not current_best[1]:
-                    current_best = (name_dist, contains_date)
-                    match = (event, g_idx, e_idx)
+                # if date matches, return that event
+                if event.date_range.contains_date(search_term.date_range.start_date):
+                    return (self.events[g_idx][e_idx], g_idx, e_idx)
         
-        return match
+        # no match found
+        return None
     
     
     
@@ -97,12 +93,35 @@ class Schedule():
         new_event = mod
         
         # replacements
-        if new_event.name == None: new_event.name = curr.name
-        if new_event.description == None: new_event.description = curr.description
-        if new_event.notification_times == None: new_event.notification_times = curr.notification_times
+        if new_event.name is None: new_event.name = curr.name
+        if new_event.description is None: new_event.description = curr.description
+        if new_event.notif_times is None: new_event.notif_times = curr.notif_times
         
         # more complicated replacements (dates, times, repeat)
         
+        if new_event.date_range is None:
+            new_event.date_range = curr.date_range
+        else:
+            if new_event.date_range.start_date is None:
+                new_event.date_range.start_date = curr.date_range.start_date
+            if new_event.date_range.end_date is None:
+                new_event.date_range.end_date = curr.date_range.end_date
+
+        if new_event.time_range is None:
+            new_event.time_range = curr.time_range
+        else:
+            if new_event.time_range.start_time is None:
+                new_event.time_range.start_time = curr.time_range.start_time
+            if new_event.time_range.end_time is None:
+                new_event.time_range.end_time = curr.time_range.end_time
+
+        if new_event.repeat is None:
+            new_event.repeat = curr.repeat
+        else:
+            if new_event.repeat.cycle is None:
+                new_event.repeat.cycle = curr.repeat.cycle
+            if new_event.repeat.duration is None:
+                new_event.repeat.duration = curr.repeat.duration
         
         # replace
         if index is None: # whole group
@@ -116,7 +135,7 @@ class Schedule():
     # performs the tasks set by the command
     # ex. create/modify/delete event
     def perform_command(self, command:Command) -> Response:
-        response = Response(command.id)
+        response = Response()
     
         # yeah whatever we have to do this instead of 
         # just using the enums like it should be
@@ -136,7 +155,7 @@ class Schedule():
 
             case "EDIT":
                 # ensure correct command data
-                assert type(command.data) == Tuple[CalendarEvent, CalendarEvent]
+                assert type(command.data) == tuple and len(command.data) == 2
                 
                 # first: search based on first event (search terms)
                 response.data = self.search_events(command.data[0])
