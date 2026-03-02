@@ -3,9 +3,10 @@ from datetime import date as Date, time as Time, timedelta
 from typing import List, Dict, Set, Tuple
 from copy import deepcopy
 
-# represents different timespan derivatives
+
+
 class TimeType(Enum):
-    """reprenents a time denomination."""
+    """Reprenents a time denomination."""
     
     MINUTE = "minute(s)"
     HOUR = "hour(s)"
@@ -18,11 +19,11 @@ class TimeType(Enum):
 
 class Day(Enum):
     """
-    represents a weekday.
+    Represents a weekday.
     
-    triple-letters are the first three letters of the day.
+    Triple-letters are the first three letters of the day.
     
-    single-letters are the first letter of the day, except:
+    Single-letters are the first letter of the day, except:
         U (for Sunday)
         R (for Thursday)
     """
@@ -40,11 +41,22 @@ class Day(Enum):
 # holds a single range of times
 class TimeRange:
     """
-    holds a start and end time.
+    Holds a start and end time.
     
-    times can be the same (representing one instant, ex. for a reminder).
+    Members:
+        - start_time: starting time (Time)
+        - end_time: ending time (Time)
     
-    end time can be "before" end time (for multi-day events).
+    Requirements:
+        - cannot have "p" with hours >12
+    
+    String constructors:
+        - \[time]:
+            - r"1?[0-9]:[0-5][0-9][ap]"
+    
+    Notes:
+        - if only one parameter is passed, both start and end will be set to it
+        - end_time can be before start_time (ex. for events lasting multiple days)
         
     """
     start_time: Time
@@ -94,9 +106,22 @@ class TimeRange:
 # class that holds a range of dates
 class DateRange:
     """
-    holds a start and end date.
+    Holds a start and end date.
     
-    dates can be the same (represeting a single-day event).
+    Members:
+        - start_date: beginning date (Date)
+        - end_date: ending date (Date)
+        
+    Requirements:
+        - end_date cannot be before start_date
+    
+    String constructors:
+        - \[date]: 
+            - r"1?[0-9]/[123]?[0-9]\(/[0-9]+)?"  (mm/dd(/yyyy))
+            - r"(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec) [123]?[0-9] ([0-9]+)?"  (mmm dd( yyyy))
+        
+    Notes:
+        - when passed only one parameter, sets both start and end dates to that date.
     """
     start_date: Date
     end_date: Date
@@ -174,28 +199,31 @@ class DateRange:
     
     
 # class to hold semester start/end dates
+# TODO: figure out what to do with this / how to implement
 class Semesters:
     terms: Dict # {str, DateRange}
 
 
-
-# specifies amount of repeats.
-# type: one of:
-#       - TimeType.DAY (repeat every day)
-#       - TimeType.WEEK (repeat every week on specific weekdays)
-#       - TimeType.MOTNH (repeat every month on specific dates)
-#       - TimeType.YEAR (repeat every year on specific dates)
-# set: set of days the event will repeat on.
-#       - if type==WEEK: set of weekdays
-#       - else: set of Dates (if months, always use january)
 class RepeatCycle():
-    """specifies how an event repeats."""
+    """
+    Specifies how an event repeats.
+    
+    Members:
+        - timespan: by what timespan to repeat (TimeType)
+        - days: which days to repeat on (weekly: Set[Day]; monthly/yearly: Set[Date])
+        
+    Requirements:
+        - 
+    
+    String constructors:
+        - timespan: r"day|week|month|year"
+        - days:
+            - r"[mtwrfsu]" (if weekly)
+            - r"({Date} )+" (if monthly or yearly)
+    """
     
     timespan: TimeType
-    """by what timespan to repeat (daily, weekly, monthly, or yearly)"""
-    
     days: Set[Date] | Set[Day]
-    """which specific days (weekly) or dates (monthly/yearly) to repeat on"""
     
     @staticmethod
     def _str_to_time_type(string: str) -> TimeType:
@@ -275,7 +303,7 @@ class RepeatCycle():
 
 class DurationType(Enum):
     """
-    type of repeat duration.
+    Type of repeat duration.
     
     one of FOREVER, NUM_TIMES, or UNTIL_DATE
     """
@@ -286,13 +314,23 @@ class DurationType(Enum):
 
 
 class RepeatDuration:
-    """repeat duration and amount."""
+    """
+    How long an event repeats for.
+    
+    Members:
+        - dur_type: what kind of duration (forever/num times/until date) (RepeatDuration)
+        - value: value associated with duration type (int for num_times, Date for until_date)
+        
+    String constructors:
+        - dur_type: r"forever|times|until"
+        - value: dat constructor if dur_type is until_date, otherwise int
+    
+    Notes:
+        - for "forever" type, actually just make 500 (can't really have unlimited)
+    """
     
     dur_type: DurationType
-    """type of duration (forever, number of times, or until specific date)"""
-    
     value: int | Date
-    """how many times or what date until"""
     
     def __init__(self, dur_type:DurationType|str, dur_value: int|Date|str):
         if type(dur_type) == str:
@@ -325,13 +363,20 @@ class RepeatDuration:
 
 
 class Repeat:
-    """repeat data for an event."""
+    """
+    Holds information about when and how an event can repeat.
+    
+    members:
+        - cycle: when/how to repeat (RepeatCycle)
+        - duration: how long to repeat for (RepeatDuration)
+        
+    string constructors:
+        - repeat: RepeatCycle
+        - duration: RepeatDuration
+    """
     
     cycle: RepeatCycle
-    """how the event repeats"""
-    
     duration: RepeatDuration
-    """how long the event repeats for"""
 
     def __init__(self, repeat:RepeatCycle|str, duration: RepeatDuration|str):
         if type(repeat) == str:
@@ -358,13 +403,19 @@ class Repeat:
     
 
 class NotifTime():
-    """how long before an event to send a notification."""
+    """
+    Holds a specific number of a specific timespan. Ex: 5 minutes
+    
+    members:
+        - timespan_type: what time denomination (TimeType; e.g. minutes, hours, days)
+        - num_timespans: how many specified denominations (int)
+        
+    requirements:
+        - num_timespans must be >= 0 (non-negative)
+    """
     
     timespan_type: TimeType
-    """time denomination (minutes, hours, etc.)"""
-    
     num_timespans: int
-    """number of time denominations"""
     
     def __init__(self, num:int, type:TimeType=TimeType.MINUTE):
         
@@ -385,21 +436,24 @@ class NotifTime():
 
 # represents a calendar event, possibly repeating
 class CalendarEvent():
-    """represents a single calendar event."""
+    """
+    Represents a single calendar event.
+    
+    members:
+        - name: event name (string)
+        - description: event description (string)
+        - notif_times: list of times before event to notify user (List[NotifTime])
+        - date_range: contains the event's start and end dates (DateRange)
+        - time_range: contains the event's start and end times (TimeRange)
+        - repeat: information about if, when, and how to repeat (Repeat)
+    """
     
     name: str
     description: str
-    notification_times: List[NotifTime]
-    """list of times by which to send out a notification."""
-    
+    notif_times: List[NotifTime]
     date_range: DateRange
-    """start and end dates"""
-    
     time_range: TimeRange
-    """start and end times"""
-    
     repeat: Repeat
-    """how and how long by which the event repeats"""
     
     # initialize using full types
     def __init__(
@@ -413,7 +467,7 @@ class CalendarEvent():
     ):
         self.name = name
         self.description = desc
-        self.notification_times = notifs
+        self.notif_times = notifs
         self.date_range = dates
         self.time_range = times
         self.repeat = repeat
@@ -515,21 +569,16 @@ class CalendarEvent():
     # for printing
     def __str__(self):
         result = "name: " + self.name + "\n"
-        result += "desc: " + self.description + "\n"
+        result += "desc:\n\t" + self.description.replace("\n", "\n\t") + "\n"
         
-        if self.notification_times is not None:
+        if self.notif_times is not None:
             result += "notifs:\n"
-            for notif in self.notification_times:
+            for notif in self.notif_times:
                 result += "\t" + str(notif) + " before\n"
         
         result += "date range: " + str(self.date_range) + "\n"
         result += "time range: " + str(self.time_range) + "\n"
         
-        result += "repeat:\n"
-        result += "\ttype: " + str(self.repeat.cycle) + "\n"
-        result += "\tdur: " + str(self.repeat.duration) + "\n"
+        result += str(self.repeat) + "\n\n"
         
         return result
-    
-    
-# TODO: wayyy more try/except error handling (replace asserts)
