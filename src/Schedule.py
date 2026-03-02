@@ -99,6 +99,9 @@ class Schedule():
         
         # more complicated replacements (dates, times, repeat)
         
+        # TODO: handle edge cases
+        # (ex. keeping event length the same when changing only one time)
+        
         if new_event.date_range is None:
             new_event.date_range = curr.date_range
         else:
