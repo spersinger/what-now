@@ -567,8 +567,12 @@ class CalendarEvent():
         
     # for printing
     def __str__(self):
-        result = "name: " + self.name + "\n"
-        result += "desc:\n\t" + self.description.replace("\n", "\n\t") + "\n"
+        result = "name: " + str(self.name) + "\n"
+        
+        if self.description is None:
+            result += "desc: None\n"
+        else:
+            result += "desc:\n\t" + self.description.replace("\n", "\n\t") + "\n"
         
         if self.notif_times is not None:
             result += "notifs:\n"
@@ -578,6 +582,6 @@ class CalendarEvent():
         result += "date range: " + str(self.date_range) + "\n"
         result += "time range: " + str(self.time_range) + "\n"
         
-        result += str(self.repeat) + "\n\n"
+        result += "repeat: " + str(self.repeat) + "\n\n"
         
         return result
