@@ -21,3 +21,7 @@
 
 # source files
 !src/*.py
+
+# apk files
+!apk-files/*.apk
+
