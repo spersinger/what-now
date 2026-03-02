@@ -45,7 +45,7 @@ class Command:
     c_type: CommandType
     data: CalendarEvent | Tuple[CalendarEvent, CalendarEvent] # if 2: first is search, 2nd is modifier
     
-    def __init__(self, id:int, c_type:CommandType, data:CalendarEvent|Tuple[CalendarEvent, CalendarEvent]):
+    def __init__(self, c_type:CommandType, data:CalendarEvent|Tuple[CalendarEvent, CalendarEvent]):
         self.c_type = c_type
         self.data = data
     
