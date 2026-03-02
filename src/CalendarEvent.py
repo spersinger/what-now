@@ -116,7 +116,7 @@ class DateRange:
     
     String constructors:
         - Date: 
-            - r"1?[0-9]/[123]?[0-9]\(/[0-9]+)?"  (mm/dd(/yyyy))
+            - r"1?[0-9]/[123]?[0-9] (/[0-9]+)?"  (mm/dd(/yyyy))
             - r"(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec) [123]?[0-9] ([0-9]+)?"  (mmm dd( yyyy))
         
     Notes:
