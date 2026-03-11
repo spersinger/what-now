@@ -15,7 +15,7 @@ class LocalSyllabusParser:
         model_path: path to .gguf file
         """
         self.llm = Llama(
-            model_path="models/qwen2.5-coder-1.5b-instruct-q4_0.gguf",
+            model_path=r"C:\Users\ethan\SeniorProject\what-now\qwen2.5-coder-1.5b-instruct-q4_0.gguf",
             n_ctx=4096,  # Context window
             n_threads=4,  # CPU threads
             n_gpu_layers=0,  # Set to 35 for GPU acceleration

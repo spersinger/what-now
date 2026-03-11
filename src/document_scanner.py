@@ -11,9 +11,12 @@ from kivy.core.window import Window
 from kivy.animation import Animation
 from kivy.uix.progressbar import ProgressBar
 from typing import Optional
+from kivy.uix.filechooser import FileChooserIconView
+from kivy.uix.camera import Camera
 
 import time
 import pytesseract
+pytesseract.pytesseract.tesseract_cmd = r"C:\Users\ethan\SeniorProject\pytesseract\tesseract.exe"
 import numpy as np
 import cv2
 from PIL import Image
@@ -55,6 +58,14 @@ class DocumentScanner(BoxLayout):
         self.parser = LocalSyllabusParser()
         self.extracted_json = Optional[str]
 
+    def on_kv_post(self, base_widget):
+        # wait until UI is fully built
+        Clock.schedule_once(self.create_camera, 0.5)
+
+    def create_camera(self, dt):
+        self.camera = Camera(resolution=(640, 480), play=False)
+        self.ids.camera_container.add_widget(self.camera)
+
     def capture(self):
             ################################
             ## TODO : This will go to CommandInterpreter
@@ -68,7 +79,7 @@ class DocumentScanner(BoxLayout):
             # Do OCR, possibly move this to another function at some point
             timestr = time.strftime("%Y%m%d_%H%M%S")
 
-            camera = self.ids['camera']
+            camera = self.camera
 
             camera.export_to_png("IMG_{}.png".format(timestr))
 
@@ -86,8 +97,8 @@ class DocumentScanner(BoxLayout):
             )
 
             # Disable camera while processing
-            self.ids.camera.play = False
-            self.ids.camera.opacity = 0
+            self.camera.play = False
+            self.camera.opacity = 0
 
             # Build content for the verification popup, move this to a seperate function
             self.build_verify_popup_ui()
@@ -357,9 +368,9 @@ class DocumentScanner(BoxLayout):
 
     # TODO: Actually implement this, as it stands upload is completely broken because I can't test it on my computer due to my broken touchscreen.
     def upload(self):
-        '''
-        Function to upload images from a camera roll or desktop
-        '''
+        
+       # Function to upload images from a camera roll or desktop
+        
         chooser = FileChooserIconView(filters=['*.png', '*.jpg', '*.jpeg'])
         btn = Button(text="Select", size_hint_y=None, height=40)
 
