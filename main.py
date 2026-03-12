@@ -13,7 +13,7 @@ from kivy.core.window import Window
 from kivy.lang import Builder
 from kivy.config import Config
 
-Builder.load_file('../whatnow.kv')
+#Builder.load_file('../whatnow.kv')
 
 Config.set('kivy', 'camera', 'opencv')
 Config.set('graphics', 'resizable', '0')
