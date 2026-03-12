@@ -31,3 +31,5 @@ test.py
 
 # source files
 !src/*.py
+#apk
+!apk-debug/*.apk
