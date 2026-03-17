@@ -1,11 +1,21 @@
 # whitelist-style gitignore
 
-# ignore everything
+# ignored items:
+
+# (default: everything, but still search folders)
 *
 !/*
 
-# except:
-# -------
+# root dir test.py (not ignored by default for some reason)
+test.py
+
+
+
+
+
+
+
+# allowed items:
 
 # the gitignore (a little important)
 !.gitignore
