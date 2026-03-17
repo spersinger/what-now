@@ -1,8 +1,17 @@
 from kivy.app import App
 from kivy.uix.screenmanager import ScreenManager, Screen
-import speech_recognition as sr
 import threading
 from kivy.clock import Clock
+from kivy.utils import platform
+
+# testing
+if platform == 'android':
+    from jnius import autoclass
+    SpeechRecognizer = autoclass('android.speech.SpeechRecognizer')
+    Context = autoclass('android.context.Context')
+    cur_context = Context()
+else:
+    import speech_recognition as sr
 
 class Voice(Screen):
 
@@ -69,28 +78,54 @@ class Voice(Screen):
 
     def listen_loop(self):
         try:
-            with sr.Microphone() as source:
-                # try to ignore background noise
-                self.r.adjust_for_ambient_noise(source, duration=0.2)
+            if platform != 'android':
+                with sr.Microphone() as source:
+                    # try to ignore background noise
+                    self.r.adjust_for_ambient_noise(source, duration=0.2)
 
-                while not self.stop_event.is_set():
-                    try:
-                        # start recording, 5 seconds for a phrase
-                        audio = self.r.listen(source, phrase_time_limit= 5)
-                        # using google for speech to text
-                        text = self.r.recognize_google(audio)
+                    while not self.stop_event.is_set():
+                        try:
+                            # start recording, 5 seconds for a phrase
+                            audio = self.r.listen(source, phrase_time_limit= 5)
+                            # using google for speech to text
+                            text = self.r.recognize_google(audio)
 
-                        # safely update app state from thread
-                        Clock.schedule_once(
-                            lambda dt, t=text: self.voice_to_string(t)
-                        )
+                            # safely update app state from thread
+                            Clock.schedule_once(
+                                lambda dt, t=text: self.voice_to_string(t)
+                            )
 
-                    except sr.UnknownValueError:
-                        pass
-                    except sr.RequestError:
-                        Clock.schedule_once(
-                            lambda dt: print("Speech service error")
-                        )
+                        except sr.UnknownValueError:
+                            pass
+                        except sr.RequestError:
+                            Clock.schedule_once(
+                                lambda dt: print("Speech service error")
+                            )
+            else: # platform is android
+                
+                # guide 1: https://stackoverflow.com/questions/4975443/is-there-a-way-to-use-the-speechrecognizer-api-directly-for-speech-input
+                
+                # guide 2.1: https://medium.com/@andraz.pajtler/android-speech-to-text-the-missing-guide-part-1-824e2636c45a
+                # guide 2.2: 
+                
+                # guide 3: https://webrtc.ventures/2025/03/real-time-speech-transcription-on-android-with-speechrecognizer/
+                
+                # use jnius to access android speech recognition api
+                rec = SpeechRecognizer.createSpeechRecognizer(cur_context)
+                listen = JavaMethod()
+                
+                if rec.isRecognitionAvailable(cur_context):
+                    rec.setRecognitionListener(RecognitionListener listener)
+                    rec.startListening(Intent recognizerIntent)
+                    
+                    while not self.stop_event.is_set():
+                        continue
+
+                    
+                else:
+                    raise EnvironmentError("Speech recognition not supported.")
+                
+                
         finally:
             self.listen_thread = None
             print("listen thread exited")

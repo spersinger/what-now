@@ -4,10 +4,9 @@
 
 # (default: everything, but still search folders)
 *
-!/*
+!*/
 
 # root dir test.py (not ignored by default for some reason)
-test.py
 
 
 
