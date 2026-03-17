@@ -1,0 +1,206 @@
+<Home>:
+    ScrollView:
+        do_scroll_x: False
+        do_scroll_y: True
+
+        id: home_root
+
+        BoxLayout:
+            orientation: "vertical"
+            padding: 10
+            spacing: 10
+            size_hint_y: None  # Don't let it shrink to fit ScrollView
+
+            height: self.minimum_height  # Expand to fit all children
+
+            # Month Header
+            HeaderLabel:
+                id: calendar_month_label
+                text: "[b]February[/b]"
+                halign: "left"
+                size_hint_y: None
+                height: self.texture_size[1]
+                text_size: self.width, None
+
+            # Calendar Box
+            ThemedBox:
+                orientation: "vertical"
+                padding: 10
+                spacing: 6
+                size_hint_y: None
+                height: self.minimum_height
+
+                # Day-of-week header row
+                BoxLayout:
+                    orientation: "horizontal"
+                    size_hint_y: None
+                    height: 20
+                    spacing: 2
+
+                    Label:
+                        text: "S"
+                        font_size: "11sp"
+                        color: 0.541, 0.541, 0.541, 1
+                        halign: "center"
+                    Label:
+                        text: "M"
+                        font_size: "11sp"
+                        color: 0.541, 0.541, 0.541, 1
+                        halign: "center"
+                    Label:
+                        text: "T"
+                        font_size: "11sp"
+                        color: 0.541, 0.541, 0.541, 1
+                        halign: "center"
+                    Label:
+                        text: "W"
+                        font_size: "11sp"
+                        color: 0.541, 0.541, 0.541, 1
+                        halign: "center"
+                    Label:
+                        text: "T"
+                        font_size: "11sp"
+                        color: 0.541, 0.541, 0.541, 1
+                        halign: "center"
+                    Label:
+                        text: "F"
+                        font_size: "11sp"
+                        color: 0.541, 0.541, 0.541, 1
+                        halign: "center"
+                    Label:
+                        text: "S"
+                        font_size: "11sp"
+                        color: 0.541, 0.541, 0.541, 1
+                        halign: "center"
+
+                # Calendar grid — populated from Python
+                GridLayout:
+                    id: calendar_grid
+                    cols: 7
+                    spacing: 2
+                    size_hint_y: None
+                    height: self.minimum_height
+
+            HeaderLabel:
+                text: "[b]Upcoming Events[/b]"
+                halign: "left"
+                size_hint_y: None
+                height: self.texture_size[1]
+                text_size: self.width, None
+
+            # Upcoming events box
+            ThemedBox:
+                id: events_box
+                orientation: "vertical"
+                padding: 10
+                spacing: 10
+                
+                size_hint_y: None  # Don't let it shrink to fit ScrollView
+
+                height: self.minimum_height  # Expand to fit all children
+
+                # Test Box of upcoming Events
+                BoxLayout:
+                    orientation: "vertical"
+                    padding: 10
+                    spacing: 4
+                    size_hint_y: None  # Don't let it shrink to fit ScrollView
+
+                    height: self.minimum_height  # Expand to fit all children
+
+
+                    Label:
+                        text: "[b]Lecture[/b]"
+                        markup: True
+                        halign: "left"
+                        size_hint_y: None
+                        height: self.texture_size[1]
+                        text_size: self.width, None
+                        font_size: "16px"
+                    Label:
+                        text: "Intro to Computing"
+                        markup: True
+                        halign: "left"
+                        size_hint_y: None
+                        height: self.texture_size[1]
+                        text_size: self.width, None
+                        font_size: "12px"
+                    Label:
+                        text: "10:00AM-11:15AM"
+                        markup: True
+                        halign: "left"
+                        size_hint_y: None
+                        height: self.texture_size[1]
+                        text_size: self.width, None
+                        font_size: "12px"
+                        color: 0.541, 0.541, 0.541, 1
+                # Test Box of upcoming Events
+                BoxLayout:
+                    orientation: "vertical"
+                    padding: 10
+                    spacing: 4
+                    size_hint_y: None  # Don't let it shrink to fit ScrollView
+
+                    height: self.minimum_height  # Expand to fit all children
+
+
+                    Label:
+                        text: "[b]Lecture[/b]"
+                        markup: True
+                        halign: "left"
+                        size_hint_y: None
+                        height: self.texture_size[1]
+                        text_size: self.width, None
+                        font_size: "16px"
+                    Label:
+                        text: "Intro to Computing"
+                        markup: True
+                        halign: "left"
+                        size_hint_y: None
+                        height: self.texture_size[1]
+                        text_size: self.width, None
+                        font_size: "12px"
+                    Label:
+                        text: "10:00AM-11:15AM"
+                        markup: True
+                        halign: "left"
+                        size_hint_y: None
+                        height: self.texture_size[1]
+                        text_size: self.width, None
+                        font_size: "12px"
+                        color: 0.541, 0.541, 0.541, 1
+                # Test Box of upcoming Events
+                BoxLayout:
+                    orientation: "vertical"
+                    padding: 10
+                    spacing: 4
+                    size_hint_y: None  # Don't let it shrink to fit ScrollView
+
+                    height: self.minimum_height  # Expand to fit all children
+
+
+                    Label:
+                        text: "[b]Lecture[/b]"
+                        markup: True
+                        halign: "left"
+                        size_hint_y: None
+                        height: self.texture_size[1]
+                        text_size: self.width, None
+                        font_size: "16px"
+                    Label:
+                        text: "Intro to Computing"
+                        markup: True
+                        halign: "left"
+                        size_hint_y: None
+                        height: self.texture_size[1]
+                        text_size: self.width, None
+                        font_size: "12px"
+                    Label:
+                        text: "10:00AM-11:15AM"
+                        markup: True
+                        halign: "left"
+                        size_hint_y: None
+                        height: self.texture_size[1]
+                        text_size: self.width, None
+                        font_size: "12px"
+                        color: 0.541, 0.541, 0.541, 1

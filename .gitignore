@@ -1,8 +1,7 @@
 # whitelist-style gitignore
 
 # ignore everything
-*
-!/*
+/*
 
 # except:
 # -------
@@ -18,6 +17,9 @@
 !requirements.txt
 !setup.sh
 !whatnow.kv
+!build.sh
 
 # source files
 !src/*.py
+!ui/*.kv
+!src/*.kv

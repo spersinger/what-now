@@ -17,11 +17,15 @@ except ModuleNotFoundError:
     quit()
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.widget import Widget
 from kivy.uix.textinput import TextInput
 
 from kivy.core.window import Window
 from kivy.lang import Builder
 from ui import *
+
+import calendar
+from datetime import date
 
 Builder.load_file('../ui/themed.kv')
 Builder.load_file('../ui/home_page.kv')
@@ -35,7 +39,56 @@ from document_scanner import DocumentScanner
 import CalendarEvent
 import Voice
 
-class Home(Screen): pass
+
+class Home(Screen):
+    def build_calendar(self, year, month):
+        grid = self.ids.calendar_grid
+        grid.clear_widgets()
+        today = date.today().day
+
+        # leading empty cells
+        first_weekday = calendar.monthrange(year, month)[0]  # 0=Mon, so adjust for Sun start
+        start_offset = (first_weekday + 1) % 7
+        for _ in range(start_offset):
+            grid.add_widget(Widget(size_hint_y=None, height=30))
+
+        for day in range(1, calendar.monthrange(year, month)[1] + 1):
+            if day == today:
+                cell = CalendarDayToday(day_text=str(day))
+            else:
+                color = [0.333, 0.333, 0.333, 1] if ... else [1, 1, 1, 1]  # gray weekends
+                cell = CalendarDayCell(day_text=str(day), day_color=color)
+            grid.add_widget(cell)
+
+    def build_events(self, events):
+        box = self.ids.events_box
+        box.clear_widgets()
+        for i, ev in enumerate(events):
+            if i > 0:
+                box.add_widget(Widget(size_hint_y=None, height=1))  # divider
+            box.add_widget(EventItem(
+                event_type=ev['type'],
+                event_name=ev['name'],
+                event_time=ev['time']
+            ))
+    def on_kv_post(self, base_widget):
+        today = date.today()
+        self.build_calendar(today.year, today.month)
+        events = [
+            {
+                'type': 'Lecture',
+                'name': 'Intro to Computing',
+                'time': '10:00AM-11:15AM'
+            },
+            {
+                'type': 'Office Hours',
+                'name': 'Intro to Computing',
+                'time': '1:00PM-3:00PM'
+            },
+        ]
+
+        self.build_events(events)
+
 class Voice(Screen): pass
 
 class Scanner(Screen):
@@ -78,6 +131,7 @@ class WhatNow(App):
         # string for voice input to be used by command interpreter
         self.voice_input = ""
         return Root()
+
 
 if __name__ == "__main__":
     WhatNow().run()
