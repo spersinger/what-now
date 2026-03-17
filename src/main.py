@@ -41,6 +41,8 @@ import Voice
 
 
 class Home(Screen):
+    # Possibly move these into their own file? Unsure
+
     def build_calendar(self, year, month):
         grid = self.ids.calendar_grid
         grid.clear_widgets()
@@ -74,6 +76,7 @@ class Home(Screen):
     def on_kv_post(self, base_widget):
         today = date.today()
         self.build_calendar(today.year, today.month)
+        ## TODO: FIX
         events = [
             {
                 'type': 'Lecture',
