@@ -1,0 +1,52 @@
+<DocumentScanner>:
+    orientation: 'vertical'
+
+    HeaderLabel:
+        text: "[b]Document Scanner[/b]"
+        halign: "left"
+        text_size: self.width - dp(16), self.height
+        size_hint: (1, 0.2)
+
+    Camera:
+        id: camera
+        resolution: (640, 480)
+        play: False
+
+    Label:
+        id: loading_text
+        opacity: 0
+        text: "Loading..."
+
+    BoxLayout:
+        size_hint_y: None
+        orientation: "vertical"
+        height: '48dp'
+        anchor_x: 'center'
+        anchor_y: 'center'
+        spacing: 10
+        padding: 10
+
+        PrimaryButton:
+            id: scan_button
+            text: '[b]Scan[/b]'
+            size_hint_x: 1
+            size_hint_y: None
+            height: '48dp'
+            on_press: root.capture()
+            disabled: False
+
+        PrimaryButton:
+            id: upload_button
+            text: '[b]Upload[/b]'
+            size_hint_x: 1
+            size_hint_y: None
+            height: '48dp'
+            on_press: root.upload()
+            disabled: False
+
+
+
+<Scanner>:
+    DocumentScanner:
+        id: cam_view
+        padding: [0, 0, 0, 20]  # left, top, right, bottom: 20px gap

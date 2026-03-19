@@ -1,0 +1,67 @@
+<Root>:
+    canvas.before:
+        Color:
+            rgba: 0.082, 0.082, 0.082, 1  # normalized #151515
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+    orientation: "vertical"
+    BoxLayout:
+        size_hint_y: None
+        height: 60
+        spacing: 10
+
+    ScreenManager:
+        id: sm
+
+        Home:
+            name: "home"
+        Voice:
+            name: "voice"
+        Scanner:
+            name: "scanner"
+
+    BoxLayout:
+        size_hint_y: None
+        height: 60
+        spacing: 10
+
+        canvas.before:
+            Color:
+                rgba: 0.325, 0.325, 0.325, 1
+            Rectangle:
+                pos: self.x - 1, self.y - 1
+                size: self.width + 2, self.height + 2
+
+            Color:
+                rgba: 0.157, 0.157, 0.157, 1
+            RoundedRectangle:
+                pos: self.pos
+                size: self.size
+                radius: [5]
+
+
+        NavButton:
+            id: home_button
+            text: "[b]Home[/b]"
+            screen_name: "home"
+            on_release:
+                app.root.set_active("home")
+        NavButton:
+            id: voice_button
+            text: "Voice"
+            screen_name: "voice"
+            # Set initial non active color
+            color: 0.6, 0.6, 0.6, 1
+            on_release:
+                app.root.set_active("voice")
+        NavButton:
+            id: scanner_button
+            text: "Scanner"
+            screen_name: "scanner"
+            # Set initial non active color
+            color: 0.6, 0.6, 0.6, 1
+            on_release:
+                app.root.set_active("scanner")
+

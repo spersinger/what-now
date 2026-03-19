@@ -12,6 +12,8 @@ from kivy.animation import Animation
 from kivy.uix.progressbar import ProgressBar
 from typing import Optional
 
+from ui import *
+
 import time
 import pytesseract
 import numpy as np
@@ -47,19 +49,36 @@ class DocumentScanner(BoxLayout):
         self.scanned_text = Optional[str]
 
         # Popup inits for verifying OCR text and AI processing
-        self.verify_text_popup = Optional[Popup]
-        self.processing_popup = Optional[Popup] 
-        self.accept_event_popup = Optional[Popup]
+        self.verify_text_popup = ThemedPopup
+        self.processing_popup = ThemedPopup
+        self.accept_event_popup = ThemedPopup
 
         # Gen AI parser
         self.parser = LocalSyllabusParser()
         self.extracted_json = Optional[str]
 
+    # TODO: Actually implement this, as it stands upload is completely broken because I can't test it on my computer due to my broken touchscreen.
+    def upload(self):
+        '''
+        Function to upload images from a camera roll or desktop
+        '''
+        chooser = FileChooserIconView(filters=['*.png', '*.jpg', '*.jpeg'])
+        btn = PrimaryButton(text="Select", size_hint_y=None, height=40)
+
+        layout = BoxLayout(orientation='vertical')
+        layout.add_widget(chooser)
+        layout.add_widget(btn)
+
+        popup = ThemedPopup(title="Select Image", content=layout,
+                      size_hint=(0.9, 0.9))
+
+        btn.bind(on_release=lambda *a: self.load_file(chooser, popup))
+        popup.open()
+
     def capture(self):
             ################################
             ## TODO : This will go to CommandInterpreter
             #################################
-
 
             # Disable buttons while processing takes place to disallow misinputs
             self.ids.scan_button.disabled = True
@@ -144,9 +163,7 @@ class DocumentScanner(BoxLayout):
         self.show_next_event()  # Show the next event
     
     def _cleanup(self, _):
-
-        # TODO: Fix upload button, it is disabled currently since it doesn't work lol
-        self.ids.upload_button.disabled = True
+        self.ids.upload_button.disabled = False
         self.ids.scan_button.disabled = False
         self.ids.camera.opacity = 100
         self.ids.camera.play = True
@@ -296,7 +313,12 @@ class DocumentScanner(BoxLayout):
         )
 
     def build_verify_popup_ui(self):
-        content = BoxLayout(orientation='vertical', padding=10, spacing=10)
+        content = BoxLayout(orientation='vertical', padding=10, spacing=5)
+
+        title = HeaderLabel(
+            text="[b]Verify Scanned Text[/b]",
+            size_hint=(1, 0.1)
+        )
 
         text_input = TextInput(
             text=self.scanned_text,
@@ -304,13 +326,14 @@ class DocumentScanner(BoxLayout):
             size_hint=(1, 0.8)
         )
 
-        finish_btn = Button(text='Analyze with AI', size_hint=(1, 0.1))
+        finish_btn = PrimaryButton(text='Analyze with AI', size_hint=(1, 0.1))
         finish_btn.bind(on_press=lambda x: self.on_verify_finish())
 
+        content.add_widget(title)
         content.add_widget(text_input)
         content.add_widget(finish_btn)
 
-        self.verify_text_popup = Popup(
+        self.verify_text_popup = ThemedPopup(
             title='Verify Scanned Text',
             content=content,
             size_hint=(0.8, 0.6),
@@ -355,21 +378,4 @@ class DocumentScanner(BoxLayout):
 
         anim.start(progress_bar)
 
-    # TODO: Actually implement this, as it stands upload is completely broken because I can't test it on my computer due to my broken touchscreen.
-    def upload(self):
-        '''
-        Function to upload images from a camera roll or desktop
-        '''
-        chooser = FileChooserIconView(filters=['*.png', '*.jpg', '*.jpeg'])
-        btn = Button(text="Select", size_hint_y=None, height=40)
-
-        layout = BoxLayout(orientation='vertical')
-        layout.add_widget(chooser)
-        layout.add_widget(btn)
-
-        popup = Popup(title="Select Image", content=layout,
-                      size_hint=(0.9, 0.9))
-
-        btn.bind(on_release=lambda *a: self.load_file(chooser, popup))
-        popup.open()
 

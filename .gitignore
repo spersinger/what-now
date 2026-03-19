@@ -28,3 +28,4 @@
 
 # source files
 !src/*.py
+!ui/*.kv
