@@ -6,9 +6,6 @@
 *
 !*/
 
-# (not ignored by default for some reason)
-.buildozer/android/platform/build-arm64-v8a/build/other_builds/numpy/
-
 
 
 
