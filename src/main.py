@@ -7,15 +7,13 @@ except ModuleNotFoundError:
     quit()
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.textinput import TextInput
 
 from kivy.core.window import Window
 from kivy.lang import Builder
 from kivy.config import Config
 
-#Builder.load_file('../whatnow.kv')
+Builder.load_file('../whatnow.kv')
 
-Config.set('kivy', 'camera', 'opencv')
 Config.set('graphics', 'resizable', '0')
 Config.set('graphics', 'width', '360')
 Config.set('graphics', 'height', '640')
@@ -26,19 +24,10 @@ Config.remove_option('input', '%(name)s')
 Config.set('input', 'mouse', 'mouse')
 
 # custom class imports
-from CalendarEvent import CalendarEvent
-from Schedule import Schedule
-from Command import CommandInterpreter
-from Voice import Voice
-from document_scanner import DocumentScanner
-
-
-# global data objects: schedule, command interpreter
-user_schedule = Schedule()
-command_interpreter = CommandInterpreter()
 
 class Home(Screen): pass
 class Voice(Screen): pass
+class DocumentScanner(Screen): pass
 
 class Scanner(Screen):
     def on_enter(self):
