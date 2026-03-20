@@ -138,8 +138,8 @@ class Root(BoxLayout):
 class WhatNow(App):
     def build(self):
         self.title = "What Now?"
-        # string for voice input to be used by command interpreter
-        self.voice_input = ""
+        # create a shared instance of command interpreter
+        self.command_interpreter = CommandInterpreter()
         return Root()
 
 

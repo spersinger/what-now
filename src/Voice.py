@@ -66,6 +66,8 @@ class Voice(Screen):
             self.ids.submit_voice_button.disabled = False
 
             self.stop_event.set()
+            if self.listen_thread and self.listen_thread.is_alive():
+                self.listen_thread.join()
 
     def listen_loop(self):
         try:
@@ -76,7 +78,7 @@ class Voice(Screen):
                 while not self.stop_event.is_set():
                     try:
                         # start recording, 5 seconds for a phrase
-                        audio = self.r.listen(source, phrase_time_limit= 5)
+                        audio = self.r.listen(source, timeout=1,phrase_time_limit= 7)
                         # using google for speech to text
                         text = self.r.recognize_google(audio)
 
@@ -84,7 +86,8 @@ class Voice(Screen):
                         Clock.schedule_once(
                             lambda dt, t=text: self.voice_to_string(t)
                         )
-
+                    except sr.WaitTimeoutError:
+                        pass
                     except sr.UnknownValueError:
                         pass
                     except sr.RequestError:
@@ -97,9 +100,14 @@ class Voice(Screen):
 
     # submit buttons function -- will eventually send text to command interpreter
     def submit_voice(self):
-        if self.ids.voice_text_input.text != "":
-            print(self.ids.voice_text_input.text)
+        text = self.ids.voice_text_input.text
+        if text != "":
+
             app = App.get_running_app()
+
+            #send text to command interpreter
+            app.command_interpreter.generate_commands(text)
+             #clear after sending
             app.voice_input = ""
             self.ids.voice_text_input.text = ""
 
