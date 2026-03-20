@@ -11,6 +11,11 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.core.window import Window
 from kivy.lang import Builder
 from kivy.config import Config
+from kivy.util import platform
+
+if platform == 'android':
+    from android.permissions import Permission, request_permissions
+    
 
 Builder.load_file('../whatnow.kv')
 
