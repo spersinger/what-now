@@ -4,12 +4,10 @@
 
 # (default: everything, but still search folders)
 *
-!/*
+!*/
 
-# root dir test.py (not ignored by default for some reason)
-test.py
-
-
+# explicitly ignore buildozer
+.buildozer/*
 
 
 
@@ -30,4 +28,4 @@ test.py
 !whatnow.kv
 
 # source files
-!src/*.py
+!main.py
