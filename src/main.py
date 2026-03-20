@@ -9,6 +9,8 @@ from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.widget import Widget
 from kivy.uix.textinput import TextInput
+from kivy.properties import StringProperty
+from kivy.uix.button import Button
 
 from kivy.core.window import Window
 from kivy.lang import Builder
@@ -109,7 +111,14 @@ class Scanner(Screen):
         self.ids.cam_view.ids.camera.play = False
 
 class Edit(Screen): pass
+
+#Helps kivy manage screen_name correctly
+#part of fixing the problem in root
+class NavButton(Button):
+    screen_name =StringProperty("")
+
 class Root(BoxLayout):
+    # Believe that this is fixed - if I understood it correctly
     # TODO, fix this, it is janky but works.
     # The issue is that passing arguments from a .kv file is sorta hit or miss
     # so I hard code the screen_name onto the buttons, and then just 
@@ -117,9 +126,11 @@ class Root(BoxLayout):
     # why this works, but it does so...
     def set_active(self, screen_name):
         sm = self.ids.sm
-        # I guess this works here? Unsure why since printing screen name gives us
-        # nothing, but it still switches the screen with sm (screen manager id)
+
         sm.current = screen_name
+
+        for btn_id in ("home_button", "voice_button", "scanner_button"):
+            btn = self.ids[btn_id]
 
         for btn_id, name in (
             ("home_button", "Home"),
