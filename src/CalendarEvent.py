@@ -156,18 +156,18 @@ class DateRange:
                 month, day = string.split()
             
             match month.lower():
-                case "jan": month = 1
-                case "feb": month = 2
-                case "mar": month = 3
-                case "apr": month = 4
-                case "may": month = 5
-                case "jun": month = 6
-                case "jul": month = 7
-                case "aug": month = 8
-                case "sep": month = 9
-                case "oct": month = 10
-                case "nov": month = 11
-                case "dec": month = 12
+                case "jan" | "january":month = 1
+                case "feb" | "february":month = 2
+                case "mar" | "march":month = 3
+                case "apr" | "april":month = 4
+                case "may":month = 5
+                case "jun" | "june":month = 6
+                case "jul" | "july":month = 7
+                case "aug" | "august":month = 8
+                case "sep" | "september":month = 9
+                case "oct" | "october":month = 10
+                case "nov" | "november":month = 11
+                case "dec" | "december":month = 12
             
         month = int(month)
         day = int(day)
@@ -448,20 +448,20 @@ class CalendarEvent():
     """
     
     name: str
-    description: str
+    description: str | None
     notif_times: List[NotifTime]
-    date_range: DateRange
-    time_range: TimeRange
+    date_range: DateRange | None
+    time_range: TimeRange | None
     repeat: Repeat
     
     # initialize using full types
     def __init__(
         self, 
         name:str, 
-        desc:str, 
+        desc:str | None,
         notifs:List[NotifTime]|None,
-        dates: DateRange,
-        times: TimeRange,
+        dates: DateRange | None,
+        times: TimeRange | None,
         repeat: Repeat
     ):
         self.name = name

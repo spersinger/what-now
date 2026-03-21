@@ -49,7 +49,7 @@ class Schedule():
     
     
     def add_event(self, event:CalendarEvent):
-        
+
         # create group to hold event(s)
         group: List[CalendarEvent] = []
         num_repeats = -1
@@ -139,7 +139,7 @@ class Schedule():
     # ex. create/modify/delete event
     def perform_command(self, command:Command) -> Response:
         response = Response()
-    
+
         # yeah whatever we have to do this instead of 
         # just using the enums like it should be
         match command.c_type.name:
@@ -174,7 +174,7 @@ class Schedule():
 
             case "ADD":
                 # TODO: error handling?
-                self.add_event(command.event)
+                self.add_event(command.data)
                 response.status = StatusCode.SUCCESS
                 response.status_details = "event was added to calendar."
 

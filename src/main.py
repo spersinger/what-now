@@ -151,6 +151,8 @@ class WhatNow(App):
         self.title = "What Now?"
         # create a shared instance of command interpreter
         self.command_interpreter = CommandInterpreter()
+        self.schedule = Schedule()
+
         return Root()
 
 

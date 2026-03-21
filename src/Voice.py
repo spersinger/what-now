@@ -107,6 +107,19 @@ class Voice(Screen):
 
             #send text to command interpreter
             app.command_interpreter.generate_commands(text)
+
+            #have schedule perform the commands
+            #send each command to perform_commands
+            #1 by 1
+            cmd_list = app.command_interpreter.commands
+            print("COMMANDS:", cmd_list)
+            for c in cmd_list:
+                print("RUNNING:", c.c_type, c.data)
+                app.schedule.perform_command(c)
+
+            # clear commands list after they are performed
+            app.command_interpreter.commands = []
+
              #clear after sending
             app.voice_input = ""
             self.ids.voice_text_input.text = ""
