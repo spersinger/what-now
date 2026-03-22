@@ -69,6 +69,7 @@ class Schedule():
         
         # append the group to the group list
         self.events.append(group)
+
     
     
     

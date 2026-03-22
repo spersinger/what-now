@@ -1,6 +1,8 @@
-from CalendarEvent import CalendarEvent, DateRange, TimeRange, Repeat, NotifTime, TimeType, RepeatDuration, RepeatCycle, DurationType, Day
+from CalendarEvent import CalendarEvent, DateRange, TimeRange, Repeat, NotifTime, TimeType, RepeatDuration, RepeatCycle, Day
 from datetime import date as Date, time as Time, timedelta
-
+from local_syllabus_parser import LocalSyllabusParser
+from llama_cpp import Llama
+import json
 #re for expression recognition (used to parse date and time)
 import re
 
@@ -89,114 +91,147 @@ class CommandInterpreter:
     
     def __init__(self):
         self.commands = list()
-    
-    # interpret text input and create one or more commands based on it
-    # (use AI model to transform text into list of commands)
-    def generate_commands(self, text:str):
-        '''Receives text input
-        appends each command to the commands list
-        '''
 
-        text = text.lower()
-        # split the input if multiple commands
-        parts = text.split(" and ")
+        self.llm = Llama(
+            model_path="models/qwen2.5-coder-1.5b-instruct-q4_0.gguf",
+            n_ctx=2048,  # Context window
+            #n_threads=4,  # CPU threads
+            #n_gpu_layers=0,  # Set to 35 for GPU acceleration
+            #verbose=False
+        )
 
-        ##TODO: replace this with AI model.
+    #AI model for parsing commands
+    def parse_command(self, text: str) -> dict:
+        prompt = f"""You are a JSON extraction assistant. Parse the following user input into structured commands.
 
-        for part in parts:
-            part = part.strip()
-            words = part.split()
-            #defaults
-            name = "event"
-            event_date = Date.today()
-            time_range = TimeRange(t1=Time(12, 0), t2=Time(12, 50))
-            notif = []
-            description = ""
+        USER INPUT:
+        {text}
 
-            # default: single occurrence (not repeating)
-            repeat_cycle = RepeatCycle("day", set())
-            repeat_duration = RepeatDuration(DurationType.NUM_TIMES, 1)
-            repeat_def = Repeat(repeat_cycle, repeat_duration)
-            # weekday values
-            weekdays = {
-                "monday": 0,
-                "tuesday": 1,
-                "wednesday": 2,
-                "thursday": 3,
-                "friday": 4,
-                "saturday": 5,
-                "sunday": 6
-            }
-            # months
-            months = [
-                "jan", "feb", "mar", "apr", "may", "jun",
-                "jul", "aug", "sep", "oct", "nov", "dec",
-                "january", "february", "march", "april", "may", "june",
-                "july", "august", "september", "october", "november", "december"
-            ]
+        INSTRUCTIONS:
+        1. Identify each command (ADD, DELETE, EDIT, SEARCH)
+        2. Extract event name for each command
+        3. Extract date (natural language allowed, e.g., "monday", "dec 8")
+            - If the user specifies a day of the week (e.g., "monday", "tuesday"), or "tomorrow", return the day name as-is instead of a numeric date.
+            - if the year is not mentioned, use 2026
+        4. Extract start_time (e.g., "8:00 am", 8 am)
+        5. Extract end_time (e.g., "8:00 am", 8 am) if present
+            - if only 1 time is present, assume it is start time, and make the end time 1 hour later
+        6. Extract repeat information:
+            - repeat pattern (e.g., "every day", "every week", "every year") or null
+            - repeat duration:
+                - "forever"
+                - "X times" (e.g., "5 times")
+                - "until DATE" (e.g., "until dec 10")
+        7. Extract notifications (e.g., "10 minutes before") as a list
+        8. If information is missing, use null
+        9. Output ONLY valid JSON, no explanation
 
-            # get name (first word after command for now)
-            for i, word in enumerate(words):
-                if word in ["add", "create", "delete", "edit", "change", "find", "search"]:
-                    if i + 1 < len(words):
-                        name = words[i + 1]
+        OUTPUT FORMAT:
+        {{
+          "commands": [
+            {{
+              "type": "ADD",
+              "name": "event name",
+              "description": null,
+              "notifications": [],
+              "date": "date string",
+              "start_time": "time",
+              "end_time": null,
+              "repeat": {{
+                "pattern": null,
+                "duration": null
+                }}
+              
+            }}
+          ]
+        }}
+
+        JSON:"""
+
+        response = self.llm.create_chat_completion(
+            messages=[{
+                "role": "user",
+                "content": prompt
+            }],
+            temperature=0.1,
+            max_tokens=1000,
+            response_format={"type": "json_object"}
+        )
+
+        content = response['choices'][0]['message']['content']
+
+        try:
+            return json.loads(content)
+        except json.JSONDecodeError as e:
+            print(f"Failed to parse JSON: {e}")
+            return {"error": "Failed to parse JSON"}
+
+    #manual parsing for date
+    def parse_date(self, date_str: str) -> DateRange:
+        date_str = date_str.lower()
+
+        weekdays = {
+            "monday": 0,
+            "tuesday": 1,
+            "wednesday": 2,
+            "thursday": 3,
+            "friday": 4,
+            "saturday": 5,
+            "sunday": 6
+        }
+
+        months = [
+            "jan", "feb", "mar", "apr", "may", "jun",
+            "jul", "aug", "sep", "oct", "nov", "dec",
+            "january", "february", "march", "april", "may", "june",
+            "july", "august", "september", "october", "november", "december"
+        ]
+
+        # default
+        event_date = Date.today()
+
+        if date_str is None:
+            return DateRange(event_date, event_date)
+        elif re.match(r"\d{4}-\d{2}-\d{2}", date_str):
+            year, month, day = map(int, date_str.split("-"))
+            date_obj = Date(year, month, day)
+            return DateRange(d1=date_obj, d2=date_obj)
+        # tomorrow
+        elif "tomorrow" in date_str:
+            event_date = Date.today() + timedelta(days=1)
+
+        # weekday
+        elif any(day in date_str for day in weekdays):
+            for day_name, day_num in weekdays.items():
+                if day_name in date_str:
+                    today = Date.today()
+                    today_num = today.weekday()
+                    days_ahead = (day_num - today_num + 7) % 7
+                    days_ahead = days_ahead if days_ahead != 0 else 7
+                    event_date = today + timedelta(days=days_ahead)
                     break
 
-            #getting description
-            description_words = []
-            # keywords that will definitley be used outside of desc
-            keywords = set(["tomorrow"] + list(weekdays.keys()) + months + ["every", "day", "week", "month", "year", "at", "am","pm"])
-            for word in words[i + 2:]:  # start after command + name
-                if word.lower() in keywords:
-                    break
-                description_words.append(word)
+        # month dd
+        elif re.search(r'(' + '|'.join(months) + r')\s+\d{1,2}(\s+\d{4})?', date_str, flags=re.IGNORECASE):
+            date_match = re.search(r'(' + '|'.join(months) + r')\s+\d{1,2}(\s+\d{4})?', date_str, flags=re.IGNORECASE)
+            event_date = DateRange._str_to_date(date_match.group(0))
 
-            description = " ".join(description_words) if description_words else None
+        # mm/dd
+        elif re.search(r'\b\d{1,2}/\d{1,2}(/\d{2,4})?\b', date_str):
+            date_match = re.search(r'\b\d{1,2}/\d{1,2}(/\d{2,4})?\b', date_str)
+            event_date = DateRange._str_to_date(date_match.group(0))
 
-           # get date ------------------------------------
-            # handle tomorrow
-            if "tomorrow" in part:
-                event_date = Date.today() + timedelta(days=1)
-                # date range to specify when adding event to command
-                date_range = DateRange(d1=event_date, d2=event_date)
-            # handle days of the week
-            elif any(day in part for day in weekdays):
-                for day_name, day_num in weekdays.items():
-                    if day_name in part:
-                        today = Date.today()
-                        today_num = today.weekday()  # 0 = Monday, 6 = Sunday
-                        days_ahead = (day_num - today_num + 7) % 7
-                        days_ahead = days_ahead if days_ahead != 0 else 7  # always next occurrence
-                        event_date = today + timedelta(days=days_ahead)
-                        break  # stop after first match
-                # date range to specify when adding event to command
-                date_range = DateRange(d1=event_date, d2=event_date)
+        return DateRange(event_date, event_date)
 
-            # handles input like "month dd"
-            # search for a date string like month d or mon d
-            elif re.search(r'(' + '|'.join(months) + r')\s+\d{1,2}(\s+\d{4})?', part, flags=re.IGNORECASE):
-                # get the matched date string
-                date_str = re.search(r'(' + '|'.join(months) + r')\s+\d{1,2}(\s+\d{4})?', part,flags=re.IGNORECASE).group(0)
-                # convert to Date object
-                event_date = DateRange._str_to_date(date_str)
-                # create a DateRange for a single-day event
-                date_range = DateRange(d1=event_date, d2=event_date)
+    #manual parse for time:
+    def parse_time(self, start_str: str, end_str: str = None) -> TimeRange:
+        # default
+        event_start = Time(12, 0)
+        event_end = Time(13, 0)
 
-            # handle mm/dd/yy inputs
-            # search for a date string
-            elif re.search(r'\b\d{1,2}/\d{1,2}(/\d{2,4})?\b', part):
-                # extract the matched numeric date string
-                date_str = re.search(r'\b\d{1,2}/\d{1,2}(/\d{2,4})?\b', part).group(0)
-                # convert to Date object using your DateRange class
-                event_date = DateRange._str_to_date(date_str)
-                # create a DateRange for a single-day event
-                date_range = DateRange(d1=event_date, d2=event_date)
+        if start_str:
+            time_match = re.search(r'(\d{1,2}(:\d{2})?\s*(am|pm))', start_str, flags=re.IGNORECASE)
 
-            # End of getting date --------------------------------
-
-            # Start of getting time ----------------------------------
-
-            time_match = re.search(r'(\d{1,2}(:\d{2})?\s*(am|pm))', part, flags=re.IGNORECASE)
             if time_match:
                 time_str = time_match.group(0).strip()
 
@@ -210,31 +245,77 @@ class CommandInterpreter:
                         meridiem = ""
                 else:
                     # e.g., "8 am"
-                    hour_str = time_str.split()[0]
+                    parts = time_str.split()
+                    hour_str = parts[0]
                     minute_str = "0"
-                    meridiem = time_str.split()[1]
+                    meridiem = parts[1] if len(parts) > 1 else ""
 
                 hour = int(hour_str)
                 minute = int(minute_str)
 
-                # convert to 24-hour Time object if needed
+                # convert to 24-hour
                 if meridiem.lower() == "pm" and hour != 12:
                     hour += 12
                 elif meridiem.lower() == "am" and hour == 12:
                     hour = 0
 
                 event_start = Time(hour, minute)
-                # for now, make end time 50 min later as default
-                event_end = Time(hour, minute + 50 if minute + 50 < 60 else 59)
-                time_range = TimeRange(t1=event_start, t2=event_end)
-            # End of getting time------------------------------------------------
 
-            # Start getting Notifications--------------------------------
+                # handle end time
+                if end_str:
+                    end_match = re.search(r'(\d{1,2}(:\d{2})?\s*(am|pm))', end_str, flags=re.IGNORECASE)
+                    if end_match:
+                        end_time_str = end_match.group(0).strip()
 
-            # match strings like "10 minutes before" or "1 hour before"
-            notif_matches = re.findall(r'(\d+)\s*(minute|minutes|hour|hours)\s*before', part, flags=re.IGNORECASE)
+                        if ":" in end_time_str:
+                            h_str, rest = end_time_str.split(":")
+                            if " " in rest:
+                                m_str, mer = rest.split()
+                            else:
+                                m_str = rest
+                                mer = ""
+                        else:
+                            parts = end_time_str.split()
+                            h_str = parts[0]
+                            m_str = "0"
+                            mer = parts[1] if len(parts) > 1 else ""
+
+                        h = int(h_str)
+                        m = int(m_str)
+
+                        if mer.lower() == "pm" and h != 12:
+                            h += 12
+                        elif mer.lower() == "am" and h == 12:
+                            h = 0
+
+                        event_end = Time(h, m)
+                    else:
+                        event_end = Time(hour + 1 if hour < 23 else 23, minute)
+
+                else:
+                    # default = +1 hour
+                    event_end = Time(hour + 1 if hour < 23 else 23, minute)
+
+        return TimeRange(t1=event_start, t2=event_end)
+
+
+    #manual parse for notifications
+    def parse_notifications(self, notif_list) -> list:
+        notifs = []
+
+        if not notif_list:
+            return notifs
+
+        for notif_str in notif_list:
+            notif_matches = re.findall(
+                r'(\d+)\s*(minute|minutes|hour|hours|day|days)\s*before',
+                notif_str,
+                flags=re.IGNORECASE
+            )
+
             for amount, unit in notif_matches:
                 amount = int(amount)
+
                 if unit.lower().startswith("minute"):
                     timespan = TimeType.MINUTE
                 elif unit.lower().startswith("hour"):
@@ -244,110 +325,211 @@ class CommandInterpreter:
                 else:
                     timespan = TimeType.MINUTE  # default
 
-                notif.append(NotifTime(amount, timespan))
-            # End getting notifications-----------------------------------
+                notifs.append(NotifTime(amount, timespan))
 
-            #start getting repeat-----------------------------------------------
-            if "every day" in part:
-                repeat_cycle = RepeatCycle("day", set())
-            elif "every week" in part:
-                # look for specific weekdays mentioned
-                weekdays_in_text = {day_name for day_name in weekdays if day_name in part}
-                if weekdays_in_text:
-                    # convert to Day enums
-                    day_enum_set = set()
-                    for day_name in weekdays_in_text:
-                        match day_name.lower():
-                            case "monday":
-                                day_enum_set.add(Day.MONDAY)
-                            case "tuesday":
-                                day_enum_set.add(Day.TUESDAY)
-                            case "wednesday":
-                                day_enum_set.add(Day.WEDNESDAY)
-                            case "thursday":
-                                day_enum_set.add(Day.THURSDAY)
-                            case "friday":
-                                day_enum_set.add(Day.FRIDAY)
-                            case "saturday":
-                                day_enum_set.add(Day.SATURDAY)
-                            case "sunday":
-                                day_enum_set.add(Day.SUNDAY)
-                    repeat_cycle = RepeatCycle("week", day_enum_set)
-                else:
-                    repeat_cycle = RepeatCycle("week", set())  # every week, no specific days
+        return notifs
 
-            if "forever" in part:
-                repeat_duration = RepeatDuration("forever", None)
+    #manual parse for repeat
+    def parse_repeat(self, repeat_data) -> Repeat:
+        # repeat_data is a dictionary from the AI model
 
-            match = re.search(r"(\d+)\s+times", part)
-            if match:
-                repeat_duration = RepeatDuration("times", match.group(1))
+        weekdays = {
+            "monday": Day.MONDAY,
+            "tuesday": Day.TUESDAY,
+            "wednesday": Day.WEDNESDAY,
+            "thursday": Day.THURSDAY,
+            "friday": Day.FRIDAY,
+            "saturday": Day.SATURDAY,
+            "sunday": Day.SUNDAY
+        }
+        pattern = repeat_data.get("pattern")
+        duration = repeat_data.get("duration")
 
-            match = re.search(r"until (\w+ \d{1,2}(?: \d{4})?)", part)
-            if match:
-                repeat_duration = RepeatDuration("until", match.group(1))
+        '''Might use this for the days in cycle
+        weekdays_provided = repeat_data.get("weekdays_provided")
 
-            # can expand later for month
+        if weekdays_provided:
+            # convert to Day enums
+            day_enum_set = set()
+            for day_name in weekdays_provided:
+                match day_name.lower():
+                    case "monday":
+                        day_enum_set.add(Day.MONDAY)
+                    case "tuesday":
+                        day_enum_set.add(Day.TUESDAY)
+                    case "wednesday":
+                        day_enum_set.add(Day.WEDNESDAY)
+                    case "thursday":
+                        day_enum_set.add(Day.THURSDAY)
+                    case "friday":
+                        day_enum_set.add(Day.FRIDAY)
+                    case "saturday":
+                        day_enum_set.add(Day.SATURDAY)
+                    case "sunday":
+                        day_enum_set.add(Day.SUNDAY)
+        '''
 
-            repeat_def = Repeat(repeat_cycle, repeat_duration)
-            #End getting repeat--------------------------------------------------------
+        #TODO: Fix parsing for cycle and duration
+        #set() can't be used, None is not accepted, not sure what it should be
+        # Handle cycle
+        if pattern is None:
+            repeat_cycle = RepeatCycle("day", set())  # default
+        elif pattern.lower() == "every day":
 
-            if "add" in part or "create" in part:
+            repeat_cycle = RepeatCycle("day", set())
+        elif pattern.lower() == "every week":
+            # you could add weekday parsing if included
+            repeat_cycle = RepeatCycle("week", set())
+        else:
+            repeat_cycle = RepeatCycle("day", set())  # fallback
+
+        # Handle duration
+        if duration is None:
+            repeat_duration = RepeatDuration("times", 1)
+        elif duration.lower() == "forever":
+            repeat_duration = RepeatDuration("forever", 500)
+        elif "times" in duration:
+            num = int(re.search(r"(\d+)", duration).group(1))
+            repeat_duration = RepeatDuration("times", num)
+        elif "until" in duration:
+            date_str = re.search(r"until (.+)", duration).group(1)
+            repeat_duration = RepeatDuration("until", date_str)
+        else:
+            repeat_duration = RepeatDuration("times", 1)  # fallback
+
+        return Repeat(repeat_cycle, repeat_duration)
+
+    # interpret text input and create one or more commands based on it
+    # (use AI model to transform text into list of commands)
+    def generate_commands(self, text:str):
+        '''Receives text input
+        Uses AI model to parse for each commands data
+        then manual parses what the AI model returns
+        appends each command to the commands list
+        '''
+
+        #AI parsing of the input
+        result = self.parse_command(text)
+
+        #for each command that the AI finds
+        for cmd_data in result["commands"]:
+            cmd_type = cmd_data["type"]
+            if cmd_type == "ADD":
+                name = cmd_data["name"]
+                desc = cmd_data["description"]
+
+                # date
+                date_range = self.parse_date(cmd_data["date"])
+
+                # time
+                time_range = self.parse_time(
+                    cmd_data["start_time"],
+                    cmd_data["end_time"]
+                )
+
+                # notifications
+                notifs = self.parse_notifications(cmd_data["notifications"])
+
+                # repeat
+                repeat = self.parse_repeat(cmd_data["repeat"])
+
                 event = CalendarEvent(
-                    name= name,
-                    desc=description,
-                    notifs=notif,
+                    name=name,
+                    desc=desc,
+                    notifs=notifs,
                     dates=date_range,
                     times=time_range,
-                    repeat=repeat_def
+                    repeat=repeat
                 )
-                self.commands.append(Command(c_type=CommandType.ADD, data=event))
 
-            elif "delete" in part:
+                self.commands.append(Command(CommandType.ADD, event))
+            elif cmd_type == "DELETE":
+                #for delete we should only need a name and date?
+                #maybe time?
+                #so what should we set description, notifs, repeat to?
+                name = cmd_data["name"]
+                desc = cmd_data["description"]
+                # date
+                date_range = self.parse_date(cmd_data["date"])
+
+                # time --  possibly need this?
+                time_range = self.parse_time(
+                    cmd_data["start_time"],
+                    cmd_data["end_time"]
+                )
+
+                # notifications-- shouldnt need this
+                notifs = self.parse_notifications(cmd_data["notifications"])
+
+                # repeat
+                repeat = self.parse_repeat(cmd_data["repeat"])
+
                 event = CalendarEvent(
                     name=name,
-                    desc=None,
-                    notifs=[],
-                    dates=None,
-                    times=None,
-                    repeat=Repeat("day", "times 1")
-                )
-                self.commands.append(Command(c_type=CommandType.DELETE, data=event))
-
-            elif "edit" in part or "change" in part:
-                # search for this event
-                search_event = CalendarEvent(
-                    name=name,
-                    desc=None,
-                    notifs=[],
-                    dates=None,
-                    times=None,
-                    repeat=Repeat("day","times 1")
-                )
-
-                # What to edit (None = leave unchanged)
-                edit_event = CalendarEvent(
-                    name=name,
-                    desc=description,
-                    notifs=notif,
+                    desc=desc,
+                    notifs=notifs,
                     dates=date_range,
                     times=time_range,
-                    repeat=repeat_def
+                    repeat=repeat #should change this to None, but it is not accepted by repeat
                 )
-                self.commands.append(Command(c_type=CommandType.EDIT, data = (search_event,edit_event)))
 
-            elif "search" in part or "find" in part:
+                self.commands.append(Command(CommandType.DELETE, event))
+            elif cmd_type == "SEARCH":
+                #for search we should only need a name and date?
+                #maybe time?
+                #so what should we set description, notifs, repeat to?
+                name = cmd_data["name"]
+                desc = cmd_data["description"]
+                # date
+                date_range = self.parse_date(cmd_data["date"])
+
+                # time --  possibly need this?
+                time_range = self.parse_time(
+                    cmd_data["start_time"],
+                    cmd_data["end_time"]
+                )
+
+                # notifications-- shouldnt need this
+                notifs = self.parse_notifications(cmd_data["notifications"])
+
+                # repeat
+                repeat = self.parse_repeat(cmd_data["repeat"])
+
                 event = CalendarEvent(
                     name=name,
-                    desc=None,
-                    notifs=[],
-                    dates=None,
-                    times=None,
-                    repeat=Repeat("day","times 1")
+                    desc=desc,
+                    notifs=notifs,
+                    dates=date_range,
+                    times=time_range,
+                    repeat=repeat #should change this to None, but it is not accepted by repeat
                 )
-                self.commands.append(Command(c_type=CommandType.SEARCH, data=event))
 
-    # manually add command to queue
+                self.commands.append(Command(CommandType.SEARCH, event))
+            elif cmd_type == "EDIT":
+                # name of the event to edit
+                target_name = cmd_data["name"]
+
+                # new values (some might be None if not changed)
+                new_desc = cmd_data.get("description")
+                new_date = self.parse_date(cmd_data.get("date")) if cmd_data.get("date") else None
+                new_time = self.parse_time(cmd_data.get("start_time"), cmd_data.get("end_time")) if cmd_data.get("start_time") else None
+                new_notifs = self.parse_notifications(cmd_data.get("notifications")) if cmd_data.get("notifications") else None
+                new_repeat = self.parse_repeat(cmd_data.get("repeat")) if cmd_data.get("repeat") else None
+
+                # Create a CalendarEvent only for the new values
+                updated_event = CalendarEvent(
+                    name=target_name,
+                    desc=new_desc,
+                    notifs=new_notifs,
+                    dates=new_date,
+                    times=new_time,
+                    repeat=new_repeat
+                )
+
+                self.commands.append(Command(CommandType.EDIT, updated_event))
+
+
+    #manually add command to queue
     # much faster (no AI model use)
     def add_command(self, command:Command):
         self.commands.append(command)

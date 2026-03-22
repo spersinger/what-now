@@ -24,7 +24,7 @@ class Voice(Screen):
         app.voice_input += text + " "
         self.ids.voice_text_input.text += text + " "
 
-        print(app.voice_input)
+        #print(app.voice_input)
         return
 
     def start_voice(self):
@@ -112,9 +112,10 @@ class Voice(Screen):
             #send each command to perform_commands
             #1 by 1
             cmd_list = app.command_interpreter.commands
-            print("COMMANDS:", cmd_list)
+
             for c in cmd_list:
-                print("RUNNING:", c.c_type, c.data)
+                print("RUNNING:", c.c_type)
+                print(c.data)
                 app.schedule.perform_command(c)
 
             # clear commands list after they are performed
