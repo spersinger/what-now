@@ -6,6 +6,7 @@ from kivy.uix.textinput import TextInput
 from kivy.properties import StringProperty
 from kivy.uix.filechooser import FileChooserIconView
 from kivy.properties import StringProperty, ListProperty
+from kivy.properties import BooleanProperty
 
 class ThemedFileChooserIconView(FileChooserIconView):
     pass
@@ -34,6 +35,7 @@ class VoiceTextInput(TextInput):
 class CalendarDayCell(BoxLayout):
     day_text = StringProperty("")
     day_color = ListProperty([1, 1, 1, 1])
+    has_event = BooleanProperty(False)
 
 class CalendarDayToday(BoxLayout):
     day_text = StringProperty("")
@@ -42,3 +44,4 @@ class EventItem(BoxLayout):
     event_type = StringProperty("")
     event_name = StringProperty("")
     event_time = StringProperty("")
+    event_date = StringProperty("")

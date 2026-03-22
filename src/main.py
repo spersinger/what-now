@@ -34,7 +34,7 @@ Config.remove_option('input', '%(name)s')
 Config.set('input', 'mouse', 'mouse')
 
 # custom class imports
-from CalendarEvent import CalendarEvent
+from CalendarEvent import *
 from Schedule import Schedule
 from Command import CommandInterpreter
 from Voice import Voice
@@ -46,58 +46,74 @@ from ui import *
 user_schedule = Schedule()
 command_interpreter = CommandInterpreter()
 
-
 class Home(Screen):
-    # Possibly move these into their own file? Unsure
+
+    def add_event(self, event: CalendarEvent):
+        user_schedule.add_event(event)
+        self.refresh()
+
+    def refresh(self):
+        today = date.today()
+        self.build_calendar(today.year, today.month)
+        self.build_events(user_schedule.get_for_date(date.today()))
 
     def build_calendar(self, year, month):
         grid = self.ids.calendar_grid
         grid.clear_widgets()
         today = date.today().day
-
-        # leading empty cells
-        first_weekday = calendar.monthrange(year, month)[0]  # 0=Mon, so adjust for Sun start
+        first_weekday = calendar.monthrange(year, month)[0]
         start_offset = (first_weekday + 1) % 7
         for _ in range(start_offset):
             grid.add_widget(Widget(size_hint_y=None, height=30))
+
+        event_days = user_schedule.get_days_with_events(year, month)  # <-- updated
 
         for day in range(1, calendar.monthrange(year, month)[1] + 1):
             if day == today:
                 cell = CalendarDayToday(day_text=str(day))
             else:
-                color = [0.333, 0.333, 0.333, 1] if ... else [1, 1, 1, 1]  # gray weekends
-                cell = CalendarDayCell(day_text=str(day), day_color=color)
+                color = [0.333, 0.333, 0.333, 1] if ... else [1, 1, 1, 1]
+                cell = CalendarDayCell(day_text=str(day), day_color=color, has_event=day in event_days)
             grid.add_widget(cell)
 
     def build_events(self, events):
         box = self.ids.events_box
         box.clear_widgets()
-        for i, ev in enumerate(events):
-            if i > 0:
-                box.add_widget(Widget(size_hint_y=None, height=1))  # divider
+        if len(events) == 0:
             box.add_widget(EventItem(
-                event_type=ev['type'],
-                event_name=ev['name'],
-                event_time=ev['time']
+                event_type='No Events Today! Enjoy your day off!',
+                event_name="",
+                event_time="",
+                event_date=""
             ))
-    def on_kv_post(self, base_widget):
-        today = date.today()
-        self.build_calendar(today.year, today.month)
-        ## TODO: FIX
-        events = [
-            {
-                'type': 'Lecture',
-                'name': 'Intro to Computing',
-                'time': '10:00AM-11:15AM'
-            },
-            {
-                'type': 'Office Hours',
-                'name': 'Intro to Computing',
-                'time': '1:00PM-3:00PM'
-            },
-        ]
+        else:
+            for i, ev in enumerate(events):
+                if i > 0:
+                    box.add_widget(Widget(size_hint_y=None, height=1))
+                box.add_widget(EventItem(
+                    event_type='Lecture',
+                    event_name=ev.name,
+                    event_time=str(ev.time_range.start_time) + " - " + str(ev.time_range.end_time),
+                    event_date=""
+                ))
 
-        self.build_events(events)
+    def on_kv_post(self, base_widget):
+        self.add_event(CalendarEvent(
+            name="Intro to Computing",
+            desc="Intro to Computing class",
+            notifs=None,
+            dates=DateRange("3/2"),
+            times=TimeRange("9:00a", "10:00a"),
+            repeat=Repeat("week mwf", "forever")
+        ))
+        self.add_event(CalendarEvent(
+            name="Language Translation",
+            desc="Language Translation class",
+            notifs=None,
+            dates=DateRange("3/2"),
+            times=TimeRange("12:30p", "1:45p"),
+            repeat=Repeat("week tr", "forever")
+        ))
 
 class Voice(Screen): pass
 

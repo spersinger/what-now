@@ -3,6 +3,7 @@ from typing import List
 from Command import Command, Response, CommandType, StatusCode
 from copy import deepcopy
 from difflib import SequenceMatcher
+import calendar
 
 # contains all of a user's events
 # purpose: manage calendar events
@@ -46,7 +47,26 @@ class Schedule():
         # no match found
         return None
     
-    
+    def get_for_date(self, date: Date) -> List[CalendarEvent]:
+        result = []
+        for group in self.events:
+            for ev in group:
+                if ev.date_range.contains_date(date):
+                    result.append(ev)
+        return result
+
+    def _event_occurs_on(self, ev: CalendarEvent, d: Date) -> bool:
+        return ev.date_range.contains_date(d)
+
+    def get_days_with_events(self, year: int, month: int) -> Set[int]:
+        days = set()
+        for group in self.events:
+            for ev in group:  # <-- iterate into the group
+                for day in range(1, calendar.monthrange(year, month)[1] + 1):
+                    d = Date(year, month, day)
+                    if self._event_occurs_on(ev, d):
+                        days.add(day)
+        return days
     
     def add_event(self, event:CalendarEvent):
         
