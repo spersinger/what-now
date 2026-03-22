@@ -111,9 +111,17 @@ class Home(Screen):
             name="Language Translation",
             desc="Language Translation class",
             notifs=None,
-            dates=DateRange("3/2"),
+            dates=DateRange("3/3"),
             times=TimeRange("12:30p", "1:45p"),
             repeat=Repeat("week tr", "forever")
+        ))
+        self.add_event(CalendarEvent(
+            name="Language Translation Exam",
+            desc="Language Translation Exam",
+            notifs=None,
+            dates=DateRange("3/17"),
+            times=TimeRange("12:30p", "1:45p"),
+            repeat=None
         ))
 
 class Voice(Screen): pass

@@ -89,6 +89,8 @@ class Schedule():
         while True:
             group.append(deepcopy(event))
             num_repeats += 1
+            if event.repeat == None:
+                break
             event.date_range = event.get_next_occurrence_dates()
             if event.date_range == None:
                 break
