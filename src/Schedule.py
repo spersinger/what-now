@@ -55,6 +55,16 @@ class Schedule():
                     result.append(ev)
         return result
 
+    def get_event_counts(self, year, month) -> dict:
+        counts = {}
+        for group in self.events:
+            for ev in group:
+                for day in range(1, calendar.monthrange(year, month)[1] + 1):
+                    d = Date(year, month, day)
+                    if self._event_occurs_on(ev, d):
+                        counts[day] = counts.get(day, 0) + 1
+        return counts
+
     def _event_occurs_on(self, ev: CalendarEvent, d: Date) -> bool:
         return ev.date_range.contains_date(d)
 

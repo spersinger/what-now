@@ -66,14 +66,15 @@ class Home(Screen):
         for _ in range(start_offset):
             grid.add_widget(Widget(size_hint_y=None, height=30))
 
-        event_days = user_schedule.get_days_with_events(year, month)  # <-- updated
+        event_counts = user_schedule.get_event_counts(year, month)  # dict: {day: count}
 
         for day in range(1, calendar.monthrange(year, month)[1] + 1):
+            count = event_counts.get(day, 0)
             if day == today:
-                cell = CalendarDayToday(day_text=str(day))
+                cell = CalendarDayToday(day_text=str(day), event_count=count)
             else:
                 color = [0.333, 0.333, 0.333, 1] if ... else [1, 1, 1, 1]
-                cell = CalendarDayCell(day_text=str(day), day_color=color, has_event=day in event_days)
+                cell = CalendarDayCell(day_text=str(day), day_color=color, event_count=count)
             grid.add_widget(cell)
 
     def build_events(self, events):
