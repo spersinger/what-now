@@ -28,4 +28,4 @@
 !whatnow.kv
 
 # source files
-!main.py
+!src/*.py
