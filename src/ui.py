@@ -9,6 +9,28 @@ from kivy.uix.filechooser import FileChooserIconView
 from kivy.properties import StringProperty, ListProperty
 from kivy.properties import BooleanProperty
 from kivy.graphics import Color, RoundedRectangle
+from kivy.uix.togglebutton import ToggleButton
+from kivy.uix.spinner import Spinner
+from kivy.uix.spinner import SpinnerOption
+
+class ThemedSpinnerOption(SpinnerOption):
+    pass
+
+class ThemedSpinner(Spinner):
+    def __init__(self, **kwargs):
+        kwargs.setdefault('option_cls', ThemedSpinnerOption)
+        super().__init__(**kwargs)
+        self.color = (0, 0, 0, 1)
+        self.background_normal = ""
+        self.background_down = ""
+        self.background_color = (0, 0, 0, 0)
+
+class ThemedToggleButton(ToggleButton):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.color = (1, 1, 1, 1) if self.state == 'down' else (0, 0, 0, 1)
+    def on_state(self, instance, value):
+        self.color = (1, 1, 1, 1) if value == 'down' else (0, 0, 0, 1)
 
 class ThemedFileChooserIconView(FileChooserIconView):
     pass
@@ -86,6 +108,8 @@ class CalendarDayToday(BoxLayout):
                 size=lambda w, v: setattr(w._rect, "size", v),
             )
             bars_container.add_widget(bar)
+
+
 
 class EventItem(BoxLayout):
     event_type = StringProperty("")

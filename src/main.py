@@ -9,6 +9,10 @@ from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.widget import Widget
 from kivy.uix.textinput import TextInput
+from kivy.uix.scrollview import ScrollView
+from kivy.uix.gridlayout import GridLayout
+from kivy.uix.checkbox import CheckBox
+from datetime import date as dt_date
 
 from kivy.core.window import Window
 from kivy.lang import Builder
@@ -35,16 +39,12 @@ Config.set('input', 'mouse', 'mouse')
 
 # custom class imports
 from CalendarEvent import *
-from Schedule import Schedule
-from Command import CommandInterpreter
 from Voice import Voice
 from document_scanner import DocumentScanner
 from ui import *
+from globals import user_schedule, command_interpreter
 
-
-# global data objects: schedule, command interpreter
-user_schedule = Schedule()
-command_interpreter = CommandInterpreter()
+import calendar
 
 class Home(Screen):
 
@@ -123,6 +123,249 @@ class Home(Screen):
             times=TimeRange("12:30p", "1:45p"),
             repeat=None
         ))
+        add_event_btn = self.ids.add_event_button
+        add_event_btn.bind(on_release=lambda *a: self.add_event_popup())
+
+    def add_event_popup(self):
+        '''
+        Popup to create and add a new CalendarEvent.
+        - Scroll wheel pickers for date and time
+        - Checkboxes for repeat days
+        - Toggle buttons for repeat frequency / end
+        '''
+
+        today = dt_date.today()
+
+        # ── Helpers ──────────────────────────────────────────────────────────────
+
+        def make_label(text, **kwargs):
+            return Label(text=text, size_hint_y=None, height=28,
+                         halign='left', valign='middle', **kwargs)
+
+        def make_spinner_row(values, default):
+            """A horizontal row of a single Spinner acting as a wheel picker."""
+            s = ThemedSpinner(text=default, values=values,
+                        size_hint=(1, None), height=40)
+            return s
+
+        # ── Root layout ──────────────────────────────────────────────────────────
+        root = BoxLayout(orientation='vertical', spacing=6, padding=10)
+        scroll = ScrollView(size_hint=(1, 1))
+        layout = BoxLayout(orientation='vertical', spacing=8, padding=[0, 0, 0, 10],
+                           size_hint_y=None)
+        layout.bind(minimum_height=layout.setter('height'))
+        scroll.add_widget(layout)
+
+        # ── Name ─────────────────────────────────────────────────────────────────
+        layout.add_widget(make_label("Event Name *"))
+        name_input = TextInput(hint_text="e.g. Intro to Computing",
+                               multiline=False, size_hint_y=None, height=40)
+        layout.add_widget(name_input)
+
+        # ── Description ──────────────────────────────────────────────────────────
+        layout.add_widget(make_label("Description"))
+        desc_input = TextInput(hint_text="Optional",
+                               multiline=False, size_hint_y=None, height=40)
+        layout.add_widget(desc_input)
+
+        # ── Date pickers ─────────────────────────────────────────────────────────
+        layout.add_widget(make_label("Start Date *"))
+        months = [str(m) for m in range(1, 13)]
+        days   = [str(d) for d in range(1, 32)]
+        years  = [str(y) for y in range(today.year, today.year + 5)]
+
+        date_row = BoxLayout(orientation='horizontal', spacing=4,
+                             size_hint_y=None, height=40)
+        month_sp = make_spinner_row(months, str(today.month))
+        day_sp   = make_spinner_row(days,   str(today.day))
+        year_sp  = make_spinner_row(years,  str(today.year))
+        for sp in [month_sp, day_sp, year_sp]:
+            date_row.add_widget(sp)
+        layout.add_widget(date_row)
+
+        # ── Time pickers ─────────────────────────────────────────────────────────
+        hours   = [str(h) for h in range(1, 13)]
+        minutes = [f"{m:02d}" for m in range(0, 60, 5)]
+        ampm    = ["AM", "PM"]
+
+        layout.add_widget(make_label("Start Time *"))
+        start_time_row = BoxLayout(orientation='horizontal', spacing=4,
+                                   size_hint_y=None, height=40)
+        start_h  = make_spinner_row(hours,   "9")
+        start_m  = make_spinner_row(minutes, "00")
+        start_ap = make_spinner_row(ampm,    "AM")
+        for sp in [start_h, start_m, start_ap]:
+            start_time_row.add_widget(sp)
+        layout.add_widget(start_time_row)
+
+        layout.add_widget(make_label("End Time *"))
+        end_time_row = BoxLayout(orientation='horizontal', spacing=4,
+                                 size_hint_y=None, height=40)
+        end_h  = make_spinner_row(hours,   "10")
+        end_m  = make_spinner_row(minutes, "00")
+        end_ap = make_spinner_row(ampm,    "AM")
+        for sp in [end_h, end_m, end_ap]:
+            end_time_row.add_widget(sp)
+        layout.add_widget(end_time_row)
+
+        # ── Repeat frequency toggle buttons ──────────────────────────────────────
+        layout.add_widget(make_label("Repeat"))
+        freq_row = BoxLayout(orientation='horizontal', spacing=4,
+                             size_hint_y=None, height=40)
+        freq_options = ["Never", "Daily", "Weekly", "Monthly"]
+        freq_buttons = {}
+        for opt in freq_options:
+            tb = ThemedToggleButton(text=opt, group='freq', size_hint=(1, None), height=40)
+            if opt == "Never":
+                tb.state = 'down'
+            freq_buttons[opt] = tb
+            freq_row.add_widget(tb)
+        layout.add_widget(freq_row)
+
+        # ── Day checkboxes (shown only when Weekly is selected) ──────────────────
+        days_label = make_label("Repeat Days")
+        day_names  = ["M", "T", "W", "Th", "F", "Sa", "Su"]
+        day_map    = {"M": "m", "T": "t", "W": "w", "Th": "th", "F": "f",
+                      "Sa": "sa", "Su": "su"}
+        days_row   = BoxLayout(orientation='horizontal', spacing=2,
+                               size_hint_y=None, height=40)
+        day_checks = {}
+        for d in day_names:
+            col = BoxLayout(orientation='vertical', size_hint=(1, None), height=40)
+            lbl = Label(text=d, size_hint_y=0.5)
+            cb  = CheckBox(size_hint_y=0.5)
+            day_checks[d] = cb
+            col.add_widget(lbl)
+            col.add_widget(cb)
+            days_row.add_widget(col)
+
+        # ── Repeat end toggle buttons ─────────────────────────────────────────────
+        end_label = make_label("Repeat Until")
+        end_row   = BoxLayout(orientation='horizontal', spacing=4,
+                              size_hint_y=None, height=40)
+        end_options = ["Forever", "Date"]
+        end_buttons = {}
+        for opt in end_options:
+            tb = ThemedToggleButton(text=opt, group='repeat_end',
+                              size_hint=(1, None), height=40)
+            if opt == "Forever":
+                tb.state = 'down'
+            end_buttons[opt] = tb
+            end_row.add_widget(tb)
+
+        # End date pickers (shown only when "Date" is selected)
+        end_date_row = BoxLayout(orientation='horizontal', spacing=4,
+                                 size_hint_y=None, height=40)
+        end_month_sp = make_spinner_row(months, str(today.month))
+        end_day_sp   = make_spinner_row(days,   str(today.day))
+        end_year_sp  = make_spinner_row(years,  str(today.year))
+        for sp in [end_month_sp, end_day_sp, end_year_sp]:
+            end_date_row.add_widget(sp)
+
+        # Show/hide repeat sub-sections based on frequency selection
+        def on_freq_change(instance, value):
+            is_weekly = freq_buttons["Weekly"].state == 'down'
+            is_never  = freq_buttons["Never"].state == 'down'
+
+            # Always remove all optional widgets first
+            for w in [days_label, days_row, end_label, end_row, end_date_row]:
+                if w.parent:
+                    w.parent.remove_widget(w)
+
+            if is_never:
+                return
+
+            # Find index just before error_label
+            idx = layout.children.index(error_label)
+
+            if is_weekly:
+                layout.add_widget(end_row,     index=idx)
+                layout.add_widget(end_label,   index=idx)
+                layout.add_widget(days_row,    index=idx)
+                layout.add_widget(days_label,  index=idx)
+            else:
+                # Daily / Monthly: just show repeat-end
+                layout.add_widget(end_row,   index=idx)
+                layout.add_widget(end_label, index=idx)
+
+        def on_end_change(instance, value):
+            if end_date_row.parent:
+                end_date_row.parent.remove_widget(end_date_row)
+
+            if end_buttons["Date"].state == 'down':
+                idx = layout.children.index(error_label)
+                layout.add_widget(end_date_row, index=idx)
+
+        for tb in freq_buttons.values():
+            tb.bind(state=on_freq_change)
+        for tb in end_buttons.values():
+            tb.bind(state=on_end_change)
+
+        # ── Error label + submit ──────────────────────────────────────────────────
+        error_label = Label(text="", color=(1, 0, 0, 1),
+                            size_hint_y=None, height=28)
+        btn = PrimaryButton(text="Add Event", size_hint_y=None, height=44)
+        layout.add_widget(error_label)
+        layout.add_widget(btn)
+
+        root.add_widget(scroll)
+        popup = ThemedPopup(title="Add Event", content=root, size_hint=(0.9, 0.92))
+
+        # ── Submit logic ──────────────────────────────────────────────────────────
+        def on_submit(*args):
+            name = name_input.text.strip()
+            if not name:
+                error_label.text = "Event name is required."
+                return
+
+            # "3/22"
+            date_str = f"{month_sp.text}/{day_sp.text}"
+
+            # "9:00a" / "10:00p"
+            def fmt_time(h, m, ap):
+                return f"{h}:{m}{'a' if ap == 'AM' else 'p'}"
+
+            time_start = fmt_time(start_h.text, start_m.text, start_ap.text)
+            time_end   = fmt_time(end_h.text,   end_m.text,   end_ap.text)
+
+            # day_map must use mtwrfsu (r = Thursday, not th)
+            day_map = {"M": "m", "T": "t", "W": "w", "Th": "r", "F": "f", "Sa": "s", "Su": "u"}
+
+            freq = next((k for k, v in freq_buttons.items() if v.state == 'down'), "Never")
+            repeat = None
+
+            if freq != "Never":
+                if freq == "Weekly":
+                    selected_days = "".join(
+                        day_map[d] for d in day_names if day_checks[d].active
+                    )
+                    rule = f"week {selected_days}" if selected_days else "week"
+                elif freq == "Daily":
+                    rule = "day"      # must match _str_to_time_type: "day" -> TimeType.DAY
+                else:
+                    rule = "month"    # must match _str_to_time_type: "month" -> TimeType.MONTH
+
+                end_mode = next((k for k, v in end_buttons.items() if v.state == 'down'), "Forever")
+                if end_mode == "Forever":
+                    repeat_end = "forever"   # matches DurationType("forever")
+                else:
+                    repeat_end = f"until {end_month_sp.text}/{end_day_sp.text}/{end_year_sp.text}"
+                    # Repeat.__init__ splits on first space -> RepeatDuration("until", "m/d/yyyy")
+
+                repeat = Repeat(rule, repeat_end)
+
+                self.add_event(CalendarEvent(
+                    name=name,
+                    desc=desc_input.text.strip() or None,
+                    notifs=None,
+                    dates=DateRange(date_str),
+                    times=TimeRange(time_start, time_end),
+                    repeat=repeat
+                ))
+                popup.dismiss()
+        
+        btn.bind(on_release=on_submit)
+        popup.open()
 
 class Voice(Screen): pass
 

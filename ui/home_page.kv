@@ -13,14 +13,30 @@
 
             height: self.minimum_height  # Expand to fit all children
 
-            # Month Header
-            HeaderLabel:
-                id: calendar_month_label
-                text: "[b]February[/b]"
-                halign: "left"
-                size_hint_y: None
-                height: self.texture_size[1]
-                text_size: self.width, None
+            BoxLayout:
+                orientation: "horizontal"
+                padding: 10
+                spacing: 10
+                size_hint_y: None  # Don't let it shrink to fit ScrollView
+
+                height: self.minimum_height  # Expand to fit all children
+
+                # Month Header
+                HeaderLabel:
+                    id: calendar_month_label
+                    text: "[b]February[/b]"
+                    halign: "left"
+                    size_hint_y: None
+                    height: self.texture_size[1]
+                    text_size: self.width, None
+
+                PrimaryButton:
+                    id: add_event_button 
+                    text: '[b]Add Event[/b]'
+                    size_hint_x: None
+                    size_hint_y: None
+                    height: '36dp'
+                    disabled: False
 
             # Calendar Box
             ThemedBox:
