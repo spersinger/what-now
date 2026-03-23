@@ -98,6 +98,7 @@ class Home(Screen):
                 ))
 
     def on_kv_post(self, base_widget):
+        # Preseeded, just for now though
         self.add_event(CalendarEvent(
             name="Intro to Computing",
             desc="Intro to Computing class",
@@ -127,7 +128,7 @@ class Home(Screen):
 
         today = dt_date.today()
 
-        # ── Helpers ──────────────────────────────────────────────────────────────
+        # Helpers
 
         def make_label(text, **kwargs):
             return Label(text=text, size_hint_y=None, height=28,
@@ -139,7 +140,7 @@ class Home(Screen):
                         size_hint=(1, None), height=40)
             return s
 
-        # ── Root layout ──────────────────────────────────────────────────────────
+        # Root layout
         root = BoxLayout(orientation='vertical', spacing=6, padding=10)
         scroll = ScrollView(size_hint=(1, 1))
         layout = BoxLayout(orientation='vertical', spacing=8, padding=[0, 0, 0, 10],
@@ -147,19 +148,19 @@ class Home(Screen):
         layout.bind(minimum_height=layout.setter('height'))
         scroll.add_widget(layout)
 
-        # ── Name ─────────────────────────────────────────────────────────────────
+        # Name
         layout.add_widget(make_label("Event Name *"))
         name_input = TextInput(hint_text="e.g. Intro to Computing",
                                multiline=False, size_hint_y=None, height=40)
         layout.add_widget(name_input)
 
-        # ── Description ──────────────────────────────────────────────────────────
+        # Description
         layout.add_widget(make_label("Description"))
         desc_input = TextInput(hint_text="Optional",
                                multiline=False, size_hint_y=None, height=40)
         layout.add_widget(desc_input)
 
-        # ── Date pickers ─────────────────────────────────────────────────────────
+        # Date pickers
         layout.add_widget(make_label("Start Date *"))
         months = [str(m) for m in range(1, 13)]
         days   = [str(d) for d in range(1, 32)]
@@ -174,7 +175,7 @@ class Home(Screen):
             date_row.add_widget(sp)
         layout.add_widget(date_row)
 
-        # ── Time pickers ─────────────────────────────────────────────────────────
+        # Time pickers 
         hours   = [str(h) for h in range(1, 13)]
         minutes = [f"{m:02d}" for m in range(0, 60, 5)]
         ampm    = ["AM", "PM"]
@@ -199,7 +200,7 @@ class Home(Screen):
             end_time_row.add_widget(sp)
         layout.add_widget(end_time_row)
 
-        # ── Repeat frequency toggle buttons ──────────────────────────────────────
+        # Repeat frequency toggle buttons
         layout.add_widget(make_label("Repeat"))
         freq_row = BoxLayout(orientation='horizontal', spacing=4,
                              size_hint_y=None, height=40)
@@ -213,7 +214,7 @@ class Home(Screen):
             freq_row.add_widget(tb)
         layout.add_widget(freq_row)
 
-        # ── Day checkboxes (shown only when Weekly is selected) ──────────────────
+        # Day checkboxes (shown only when Weekly is selected)
         days_label = make_label("Repeat Days")
         day_names  = ["M", "T", "W", "Th", "F", "Sa", "Su"]
         day_map    = {"M": "m", "T": "t", "W": "w", "Th": "th", "F": "f",
@@ -230,7 +231,6 @@ class Home(Screen):
             col.add_widget(cb)
             days_row.add_widget(col)
 
-        # ── Repeat end toggle buttons ─────────────────────────────────────────────
         end_label = make_label("Repeat Until")
         end_row   = BoxLayout(orientation='horizontal', spacing=4,
                               size_hint_y=None, height=40)
@@ -292,7 +292,6 @@ class Home(Screen):
         for tb in end_buttons.values():
             tb.bind(state=on_end_change)
 
-        # ── Error label + submit ──────────────────────────────────────────────────
         error_label = Label(text="", color=(1, 0, 0, 1),
                             size_hint_y=None, height=28)
         btn = PrimaryButton(text="Add Event", size_hint_y=None, height=44)
@@ -302,7 +301,6 @@ class Home(Screen):
         root.add_widget(scroll)
         popup = ThemedPopup(title="Add Event", content=root, size_hint=(0.9, 0.92))
 
-        # ── Submit logic ──────────────────────────────────────────────────────────
         def on_submit(*args):
             name = name_input.text.strip()
             if not name:
