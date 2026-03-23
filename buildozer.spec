@@ -38,7 +38,7 @@ version = 0.1
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = python3,kivy,numpy,opencv,pillow,requests,pytesseract,plyer,pytranscript,vosk,cffi,charset-normalizer
+requirements = python3, kivy, requests, urllib3, charset-normalizer==2.1.1, idna, certifi, llama-cpp-python, speechrecognition, pytesseract
 
 # (str) Custom source folders for requirements
 # Sets custom source for any requirements with recipes
@@ -96,13 +96,13 @@ fullscreen = 0
 
 # (list) Permissions
 # (See https://python-for-android.readthedocs.io/en/latest/buildoptions/#build-options-1 for all the supported syntaxes and properties)
-#android.permissions = android.permission.INTERNET, (name=android.permission.WRITE_EXTERNAL_STORAGE;maxSdkVersion=18)
+android.permissions = CAMERA, RECORD_AUDIO, WRITE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE
 
 # (list) features (adds uses-feature -tags to manifest)
 #android.features = android.hardware.usb.host
 
 # (int) Target Android API, should be as high as possible.
-android.api = 34
+android.api = 33
 
 # (int) Minimum API your APK / AAB will support.
 android.minapi = 24
@@ -336,7 +336,7 @@ p4a.branch = develop
 #p4a.source_dir =
 
 # (str) The directory in which python-for-android should look for your own build recipes (if any)
-#p4a.local_recipes =
+p4a.local_recipes = local_recipes
 
 # (str) Filename to the hook for p4a
 #p4a.hook =

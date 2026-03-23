@@ -1,4 +1,4 @@
-from local_syllabus_parser import *
+from LocalSyllabusParser import *
 
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.screenmanager import ScreenManager, Screen
@@ -10,6 +10,7 @@ from kivy.uix.button import Button
 from kivy.core.window import Window
 from kivy.animation import Animation
 from kivy.uix.progressbar import ProgressBar
+from kivy.lang import Builder
 from typing import Optional
 
 import time
@@ -21,6 +22,57 @@ import logging
 from threading import Thread
 
 from kivy.clock import Clock
+
+Builder.load_string('''
+<DocumentScanner>:
+    orientation: 'vertical'
+
+    Camera:
+        id: camera
+        resolution: (640, 480)
+        play: False
+
+    Label:
+        id: loading_text
+        opacity: 0
+        text: "Loading..."
+
+    BoxLayout:
+        size_hint_y: None
+        height: '48dp'
+        anchor_x: 'center'
+        anchor_y: 'center'
+
+        Button:
+            id: scan_button
+            text: 'Scan'
+            size_hint_x: 0.25
+            size_hint_y: None
+            height: '48dp'
+            on_press: root.capture()
+            disabled: False
+
+        Button:
+            id: upload_button
+            text: 'Upload'
+            size_hint_x: 0.25
+            size_hint_y: None
+            height: '48dp'
+            on_press: root.upload()
+            disabled: True
+    
+<Scanner>:
+    DocumentScanner:
+        id: cam_view
+        padding: [0, 0, 0, 20]  # left, top, right, bottom: 20px gap
+''')
+
+class Scanner(Screen):
+    def on_enter(self):
+        self.ids.cam_view.ids.camera.play = True
+
+    def on_leave(self):
+        self.ids.cam_view.ids.camera.play = False
 
 # Cycling label for loading gen AI response
 class CyclingLabel(Label):

@@ -28,4 +28,5 @@
 
 # source files
 !src/*.py
+!local_recipes/*
 !apk-debug/*.apk

@@ -1,15 +1,92 @@
+from Cython import Build
 from kivy.app import App
 from kivy.uix.screenmanager import ScreenManager, Screen
 import threading
 from kivy.clock import Clock
 from kivy.utils import platform
+from kivy.lang import Builder
+
+Builder.load_string('''
+<Voice>:
+    BoxLayout:
+        orientation: "vertical"
+        padding: 10
+        spacing: 10
+
+        id: voice_root
+
+        canvas.before:
+            Color:
+                rgba: 0.10, 0.20, 0.45, 1  # Blue background
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+
+        # Mic icon and text label in the center
+        AnchorLayout:
+            anchor_x: "center"
+            anchor_y: "center"
+
+            BoxLayout:
+                orientation: "vertical"
+                spacing: 20
+                size_hint_x: 0.95
+                size_hint_y: None
+                size: self.minimum_size
+
+                TextInput:
+                    id: voice_text_input  #will be used to show voice input to user
+
+                    hint_text: "Record to start!"
+                    font_size: "16sp"
+                    size_hint_x: 1
+
+                    size_hint_y: None
+                    height: "50dp"
+
+                Image:
+                    id: mic_icon
+                    source: "mic_white.png"
+                    size_hint: None, None
+                    size: "96dp", "96dp"
+                    pos_hint: {"center_x": 0.5}
+
+
+        Button:
+            id: record_button
+            text: "Record"
+            size_hint_y: None
+            height: "48dp"
+
+            background_normal: ""
+            background_down: ""
+            background_color:
+                (0.26, 0.38, 0.54, 1) if self.state == 'down' else (0.32, 0.45, 0.62, 1)
+
+            on_release: root.start_voice()
+        Button:
+            id: submit_voice_button
+            text: "Submit"
+            disabled: True
+            size_hint_y: None
+            height: "48dp"
+
+            background_normal: ""
+            background_down: ""
+            background_color:
+                (0.26, 0.38, 0.54, 1) if self.state == 'down' else (0.32, 0.45, 0.62, 1)
+
+            on_release: root.submit_voice()
+''')
 
 # testing
+try:
+    import speech_recognition as sr
+except:
+    print("speechrecognition import failed.")
 if platform == 'android':
-    from jnius import autoclass
-    SpeechRecognizer = autoclass('android.speech.SpeechRecognizer')
-    Context = autoclass('android.context.Context')
-    cur_context = Context()
+    from plyer import stt
 else:
     import speech_recognition as sr
 
@@ -19,13 +96,19 @@ class Voice(Screen):
         super().__init__(**kwargs)
 
         self.listen_thread = None
+        
         # used to stop recording
         self.stop_event = threading.Event()
+        
         # used to change action of the record button
         # (start vs stop recording)
         self.listening = False
+        
         # initialize the speech recognizer
-        self.r = sr.Recognizer()
+        try: # will fail if on android
+            self.r = sr.Recognizer()
+        except:
+            print("running on android.")
 
 
     def voice_to_string(self, text):
@@ -57,20 +140,29 @@ class Voice(Screen):
             self.ids.record_button.text = "Stop Recording"
 
             # thread for recording
-            self.listen_thread = threading.Thread(
-                target=self.listen_loop,
-                daemon=True  # allows application to stop thread when closed
-            )
-            self.listen_thread.start()
+            if platform == 'android':
+                if stt.exist():
+                    stt.start()
+            else:
+                self.listen_thread = threading.Thread(
+                    target=self.listen_loop,
+                    daemon=True  # allows application to stop thread when closed
+                )
+                self.listen_thread.start()
         else:
             print("recording stopped")
             self.listening = False
+            if platform == 'android' and stt.listening:
+                stt.stop()
+            
             #disabled record button for 2 seconds
             self.ids.record_button.disabled = True
             Clock.schedule_once(lambda dt: setattr(self.ids.record_button, "disabled", False), 3)
+            
             # change button text
             self.ids.record_button.text = "Record"
             mic_icon.source = "mic_white.png"  # change back to white
+            
             #enable submit button
             self.ids.submit_voice_button.disabled = False
 
@@ -101,29 +193,6 @@ class Voice(Screen):
                             Clock.schedule_once(
                                 lambda dt: print("Speech service error")
                             )
-            else: # platform is android
-                
-                # guide 1: https://stackoverflow.com/questions/4975443/is-there-a-way-to-use-the-speechrecognizer-api-directly-for-speech-input
-                
-                # guide 2.1: https://medium.com/@andraz.pajtler/android-speech-to-text-the-missing-guide-part-1-824e2636c45a
-                # guide 2.2: 
-                
-                # guide 3: https://webrtc.ventures/2025/03/real-time-speech-transcription-on-android-with-speechrecognizer/
-                
-                # use jnius to access android speech recognition api
-                rec = SpeechRecognizer.createSpeechRecognizer(cur_context)
-                listen = JavaMethod()
-                
-                if rec.isRecognitionAvailable(cur_context):
-                    rec.setRecognitionListener(RecognitionListener listener)
-                    rec.startListening(Intent recognizerIntent)
-                    
-                    while not self.stop_event.is_set():
-                        continue
-
-                    
-                else:
-                    raise EnvironmentError("Speech recognition not supported.")
                 
                 
         finally:
