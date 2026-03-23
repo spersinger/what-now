@@ -11,7 +11,6 @@ from kivy.uix.widget import Widget
 from kivy.uix.textinput import TextInput
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.gridlayout import GridLayout
-from kivy.uix.checkbox import CheckBox
 from datetime import date as dt_date
 
 from kivy.core.window import Window
@@ -114,14 +113,6 @@ class Home(Screen):
             dates=DateRange("3/3"),
             times=TimeRange("12:30p", "1:45p"),
             repeat=Repeat("week tr", "forever")
-        ))
-        self.add_event(CalendarEvent(
-            name="Language Translation Exam",
-            desc="Language Translation Exam",
-            notifs=None,
-            dates=DateRange("3/17"),
-            times=TimeRange("12:30p", "1:45p"),
-            repeat=None
         ))
         add_event_btn = self.ids.add_event_button
         add_event_btn.bind(on_release=lambda *a: self.add_event_popup())
@@ -233,7 +224,7 @@ class Home(Screen):
         for d in day_names:
             col = BoxLayout(orientation='vertical', size_hint=(1, None), height=40)
             lbl = Label(text=d, size_hint_y=0.5)
-            cb  = CheckBox(size_hint_y=0.5)
+            cb  = ThemedCheckBox(size_hint_y=0.5)
             day_checks[d] = cb
             col.add_widget(lbl)
             col.add_widget(cb)
@@ -279,14 +270,14 @@ class Home(Screen):
             idx = layout.children.index(error_label)
 
             if is_weekly:
-                layout.add_widget(end_row,     index=idx)
                 layout.add_widget(end_label,   index=idx)
-                layout.add_widget(days_row,    index=idx)
+                layout.add_widget(end_row,     index=idx)
                 layout.add_widget(days_label,  index=idx)
+                layout.add_widget(days_row,    index=idx)
             else:
                 # Daily / Monthly: just show repeat-end
-                layout.add_widget(end_row,   index=idx)
                 layout.add_widget(end_label, index=idx)
+                layout.add_widget(end_row,   index=idx)
 
         def on_end_change(instance, value):
             if end_date_row.parent:
@@ -354,15 +345,15 @@ class Home(Screen):
 
                 repeat = Repeat(rule, repeat_end)
 
-                self.add_event(CalendarEvent(
-                    name=name,
-                    desc=desc_input.text.strip() or None,
-                    notifs=None,
-                    dates=DateRange(date_str),
-                    times=TimeRange(time_start, time_end),
-                    repeat=repeat
-                ))
-                popup.dismiss()
+            self.add_event(CalendarEvent(
+                name=name,
+                desc=desc_input.text.strip() or None,
+                notifs=None,
+                dates=DateRange(date_str),
+                times=TimeRange(time_start, time_end),
+                repeat=repeat
+            ))
+            popup.dismiss()
         
         btn.bind(on_release=on_submit)
         popup.open()

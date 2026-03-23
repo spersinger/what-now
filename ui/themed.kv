@@ -27,6 +27,28 @@
             points:
                 [ self.right - 20, self.y + self.height * 0.55, self.right - 8,  self.y + self.height * 0.55, self.right - 14, self.y + self.height * 0.35 ]
 
+<ThemedCheckBox>:
+    background_checkbox_normal: ''
+    background_checkbox_down: ''
+    background_radio_normal: ''
+    background_radio_down: ''
+    color: 0, 0, 0, 0
+    canvas.before:
+        # Outer white rounded rectangle
+        Color:
+            rgba: (1, 1, 1, 1)
+        RoundedRectangle:
+            pos: self.center_x - self.height / 2, self.center_y - self.height / 2
+            size: self.height, self.height
+            radius: [6]
+        # Blue inner rounded rectangle (only when checked)
+        Color:
+            rgba: (0.302, 0.659, 0.910, 1) if self.active else (0, 0, 0, 0)
+        RoundedRectangle:
+            pos: self.center_x - self.height / 2, self.center_y - self.height / 2
+            size: self.height, self.height
+            radius: [6]
+
 <ThemedSpinnerOption>:
     background_normal: ""
     background_down: ""
@@ -38,6 +60,11 @@
         Rectangle:
             pos: self.pos
             size: self.size
+        Color:
+            rgba: (0.8, 0.8, 0.8, 1)
+        Line:
+            points: self.x, self.y, self.right, self.y
+            width: 2
 
 <ThemedBox>:
     background_normal: ""

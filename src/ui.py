@@ -12,6 +12,10 @@ from kivy.graphics import Color, RoundedRectangle
 from kivy.uix.togglebutton import ToggleButton
 from kivy.uix.spinner import Spinner
 from kivy.uix.spinner import SpinnerOption
+from kivy.uix.checkbox import CheckBox
+
+class ThemedCheckBox(CheckBox):
+    pass
 
 class ThemedSpinnerOption(SpinnerOption):
     pass
