@@ -93,11 +93,10 @@ class CommandInterpreter:
         self.commands = list()
 
         self.llm = Llama(
-            model_path="models/qwen2.5-coder-1.5b-instruct-q4_0.gguf",
-            n_ctx=2048,  # Context window
-            #n_threads=4,  # CPU threads
-            #n_gpu_layers=0,  # Set to 35 for GPU acceleration
-            #verbose=False
+            model_path=r"C:\Users\ethan\SeniorProject\what-now\qwen2.5-coder-1.5b-instruct-q4_0.gguf",
+            n_ctx=1024,  # Context window
+            n_threads=10  # CPU threads
+
         )
 
     #AI model for parsing commands
@@ -109,30 +108,34 @@ class CommandInterpreter:
 
         INSTRUCTIONS:
         1. Identify each command (ADD, DELETE, EDIT, SEARCH)
-        2. Extract event name for each command
-        3. Extract date (natural language allowed, e.g., "monday", "dec 8")
+        2. Extract event name for each command (event name should be after the command)
+        3. Extract a short event description:
+            - Include only words that describe the event itself
+            - Exclude weekdays, date, time, repeat, and notification phrases
+            - If no extra description is provided, return null
+        4. Extract date (natural language allowed, e.g., "monday", "dec 8")
             - If the user specifies a day of the week (e.g., "monday", "tuesday"), or "tomorrow", return the day name as-is instead of a numeric date.
             - if the year is not mentioned, use 2026
-        4. Extract start_time (e.g., "8:00 am", 8 am)
-        5. Extract end_time (e.g., "8:00 am", 8 am) if present
+        5. Extract start_time (e.g., "8:00 am", 8 am)
+        6. Extract end_time (e.g., "8:00 am", 8 am) if present
             - if only 1 time is present, assume it is start time, and make the end time 1 hour later
-        6. Extract repeat information:
+        7. Extract repeat information:
             - repeat pattern (e.g., "every day", "every week", "every year") or null
             - repeat duration:
                 - "forever"
                 - "X times" (e.g., "5 times")
                 - "until DATE" (e.g., "until dec 10")
-        7. Extract notifications (e.g., "10 minutes before") as a list
-        8. If information is missing, use null
-        9. Output ONLY valid JSON, no explanation
+        8. Extract notifications (e.g., "10 minutes before") as a list
+        9. If information is missing, use null
+        10. Output ONLY valid JSON, no explanation
 
         OUTPUT FORMAT:
         {{
           "commands": [
             {{
-              "type": "ADD",
+              "type": "ADD|DELETE|EDIT|SEARCH",
               "name": "event name",
-              "description": null,
+              "description": "...",
               "notifications": [],
               "date": "date string",
               "start_time": "time",
@@ -154,7 +157,7 @@ class CommandInterpreter:
                 "content": prompt
             }],
             temperature=0.1,
-            max_tokens=1000,
+            max_tokens=200,
             response_format={"type": "json_object"}
         )
 
@@ -407,6 +410,7 @@ class CommandInterpreter:
         then manual parses what the AI model returns
         appends each command to the commands list
         '''
+
 
         #AI parsing of the input
         result = self.parse_command(text)
