@@ -5,6 +5,7 @@ from llama_cpp import Llama
 import json
 #re for expression recognition (used to parse date and time)
 import re
+from datetime import datetime
 
 from enum import Enum
 from typing import Tuple, List
@@ -114,13 +115,18 @@ class CommandInterpreter:
             - Exclude weekdays, date, time, repeat, and notification phrases
             - If no extra description is provided, return null
         4. Extract date (natural language allowed, e.g., "monday", "dec 8")
-            - If the user specifies a day of the week (e.g., "monday", "tuesday"), or "tomorrow", return the day name as-is instead of a numeric date.
+            -start_date:
+                - If the user specifies a day of the week (e.g., "monday", "tuesday"), or "tomorrow", return the day name as-is instead of a numeric date.
+                - if there are two dates use the first date for start_date
+            -end_date:
+                -if there is only one date, use it for both start_date and end_date
+                - if there is two dates use the second one for end_date
             - if the year is not mentioned, use 2026
         5. Extract start_time (e.g., "8:00 am", 8 am)
         6. Extract end_time (e.g., "8:00 am", 8 am) if present
             - if only 1 time is present, assume it is start time, and make the end time 1 hour later
         7. Extract repeat information:
-            - repeat pattern (e.g., "every day", "every week", "every year") or null
+            - repeat pattern (e.g., "every day", "every week", "every month" "every year") or null
             - repeat duration:
                 - "forever"
                 - "X times" (e.g., "5 times")
@@ -135,9 +141,12 @@ class CommandInterpreter:
             {{
               "type": "ADD|DELETE|EDIT|SEARCH",
               "name": "event name",
-              "description": "...",
+              "description": null,
               "notifications": [],
-              "date": "date string",
+              "date": {{
+                "start_date": null,
+                "end_date": null
+                }}
               "start_time": "time",
               "end_time": null,
               "repeat": {{
@@ -170,7 +179,7 @@ class CommandInterpreter:
             return {"error": "Failed to parse JSON"}
 
     #manual parsing for date
-    def parse_date(self, date_str: str) -> DateRange:
+    def parse_date(self, date_str: str) -> Date:
         date_str = date_str.lower()
 
         weekdays = {
@@ -194,11 +203,11 @@ class CommandInterpreter:
         event_date = Date.today()
 
         if date_str is None:
-            return DateRange(event_date, event_date)
+            return event_date
         elif re.match(r"\d{4}-\d{2}-\d{2}", date_str):
             year, month, day = map(int, date_str.split("-"))
             date_obj = Date(year, month, day)
-            return DateRange(d1=date_obj, d2=date_obj)
+            return date_obj
         # tomorrow
         elif "tomorrow" in date_str:
             event_date = Date.today() + timedelta(days=1)
@@ -224,7 +233,7 @@ class CommandInterpreter:
             date_match = re.search(r'\b\d{1,2}/\d{1,2}(/\d{2,4})?\b', date_str)
             event_date = DateRange._str_to_date(date_match.group(0))
 
-        return DateRange(event_date, event_date)
+        return event_date
 
     #manual parse for time:
     def parse_time(self, start_str: str, end_str: str = None) -> TimeRange:
@@ -333,62 +342,47 @@ class CommandInterpreter:
         return notifs
 
     #manual parse for repeat
-    def parse_repeat(self, repeat_data) -> Repeat:
+    def parse_repeat(self, repeat_data, start,end) -> Repeat:
         # repeat_data is a dictionary from the AI model
 
-        weekdays = {
-            "monday": Day.MONDAY,
-            "tuesday": Day.TUESDAY,
-            "wednesday": Day.WEDNESDAY,
-            "thursday": Day.THURSDAY,
-            "friday": Day.FRIDAY,
-            "saturday": Day.SATURDAY,
-            "sunday": Day.SUNDAY
-        }
         pattern = repeat_data.get("pattern")
         duration = repeat_data.get("duration")
 
-        '''Might use this for the days in cycle
-        weekdays_provided = repeat_data.get("weekdays_provided")
+        day_map = {
+            "Monday": "m",
+            "Tuesday": "t",
+            "Wednesday": "w",
+            "Thursday": "r",
+            "Friday": "f",
+            "Saturday": "s",
+            "Sunday": "u"
+        }
 
-        if weekdays_provided:
-            # convert to Day enums
-            day_enum_set = set()
-            for day_name in weekdays_provided:
-                match day_name.lower():
-                    case "monday":
-                        day_enum_set.add(Day.MONDAY)
-                    case "tuesday":
-                        day_enum_set.add(Day.TUESDAY)
-                    case "wednesday":
-                        day_enum_set.add(Day.WEDNESDAY)
-                    case "thursday":
-                        day_enum_set.add(Day.THURSDAY)
-                    case "friday":
-                        day_enum_set.add(Day.FRIDAY)
-                    case "saturday":
-                        day_enum_set.add(Day.SATURDAY)
-                    case "sunday":
-                        day_enum_set.add(Day.SUNDAY)
-        '''
+        #convert start and end to day of week
+        start_dow= day_map[start.strftime("%A")]
+        end_dow = day_map[end.strftime("%A")]
 
-        #TODO: Fix parsing for cycle and duration
-        #set() can't be used, None is not accepted, not sure what it should be
+        #I think i got this fixed already,
+        #leaving it here just incase, it could
+        #use another set of eyes
+        ##TODO: Fix parsing for cycle and duration
         # Handle cycle
         if pattern is None:
-            repeat_cycle = RepeatCycle("day", set())  # default
+            repeat_cycle = RepeatCycle("day",start_dow )  # default
         elif pattern.lower() == "every day":
-
-            repeat_cycle = RepeatCycle("day", set())
+            repeat_cycle = RepeatCycle("day", start_dow)
         elif pattern.lower() == "every week":
-            # you could add weekday parsing if included
-            repeat_cycle = RepeatCycle("week", set())
+            repeat_cycle = RepeatCycle("week", start_dow)
+        elif pattern.lower() == "every month":
+            repeat_cycle = RepeatCycle("month", start)
+        elif pattern.lower() == "every year":
+            repeat_cycle = RepeatCycle("year", start)
         else:
-            repeat_cycle = RepeatCycle("day", set())  # fallback
+            repeat_cycle = RepeatCycle("day", start_dow)  # fallback
 
         # Handle duration
         if duration is None:
-            repeat_duration = RepeatDuration("times", 1)
+            repeat_duration = RepeatDuration("times", 0)
         elif duration.lower() == "forever":
             repeat_duration = RepeatDuration("forever", 500)
         elif "times" in duration:
@@ -396,9 +390,9 @@ class CommandInterpreter:
             repeat_duration = RepeatDuration("times", num)
         elif "until" in duration:
             date_str = re.search(r"until (.+)", duration).group(1)
-            repeat_duration = RepeatDuration("until", date_str)
+            repeat_duration = RepeatDuration("until", end)
         else:
-            repeat_duration = RepeatDuration("times", 1)  # fallback
+            repeat_duration = RepeatDuration("times", 0)  # fallback
 
         return Repeat(repeat_cycle, repeat_duration)
 
@@ -418,30 +412,32 @@ class CommandInterpreter:
         #for each command that the AI finds
         for cmd_data in result["commands"]:
             cmd_type = cmd_data["type"]
+
+            name = cmd_data["name"]
+            desc = cmd_data["description"]
+
+            # date
+            start_date = self.parse_date(cmd_data["date"]["start_date"])
+            end_date = self.parse_date(cmd_data["date"]["end_date"])
+            # time
+            time_range = self.parse_time(
+                cmd_data["start_time"],
+                cmd_data["end_time"]
+            )
+
+            # notifications
+            notifs = self.parse_notifications(cmd_data["notifications"])
+
+            # repeat
+            repeat = self.parse_repeat(cmd_data["repeat"],start_date, end_date)
+
             if cmd_type == "ADD":
-                name = cmd_data["name"]
-                desc = cmd_data["description"]
-
-                # date
-                date_range = self.parse_date(cmd_data["date"])
-
-                # time
-                time_range = self.parse_time(
-                    cmd_data["start_time"],
-                    cmd_data["end_time"]
-                )
-
-                # notifications
-                notifs = self.parse_notifications(cmd_data["notifications"])
-
-                # repeat
-                repeat = self.parse_repeat(cmd_data["repeat"])
 
                 event = CalendarEvent(
                     name=name,
                     desc=desc,
                     notifs=notifs,
-                    dates=date_range,
+                    dates=DateRange(start_date,end_date),
                     times=time_range,
                     repeat=repeat
                 )
@@ -451,28 +447,12 @@ class CommandInterpreter:
                 #for delete we should only need a name and date?
                 #maybe time?
                 #so what should we set description, notifs, repeat to?
-                name = cmd_data["name"]
-                desc = cmd_data["description"]
-                # date
-                date_range = self.parse_date(cmd_data["date"])
-
-                # time --  possibly need this?
-                time_range = self.parse_time(
-                    cmd_data["start_time"],
-                    cmd_data["end_time"]
-                )
-
-                # notifications-- shouldnt need this
-                notifs = self.parse_notifications(cmd_data["notifications"])
-
-                # repeat
-                repeat = self.parse_repeat(cmd_data["repeat"])
 
                 event = CalendarEvent(
                     name=name,
                     desc=desc,
                     notifs=notifs,
-                    dates=date_range,
+                    dates=DateRange(start_date,end_date),
                     times=time_range,
                     repeat=repeat #should change this to None, but it is not accepted by repeat
                 )
@@ -482,28 +462,12 @@ class CommandInterpreter:
                 #for search we should only need a name and date?
                 #maybe time?
                 #so what should we set description, notifs, repeat to?
-                name = cmd_data["name"]
-                desc = cmd_data["description"]
-                # date
-                date_range = self.parse_date(cmd_data["date"])
-
-                # time --  possibly need this?
-                time_range = self.parse_time(
-                    cmd_data["start_time"],
-                    cmd_data["end_time"]
-                )
-
-                # notifications-- shouldnt need this
-                notifs = self.parse_notifications(cmd_data["notifications"])
-
-                # repeat
-                repeat = self.parse_repeat(cmd_data["repeat"])
 
                 event = CalendarEvent(
                     name=name,
                     desc=desc,
                     notifs=notifs,
-                    dates=date_range,
+                    dates=DateRange(start_date,end_date),
                     times=time_range,
                     repeat=repeat #should change this to None, but it is not accepted by repeat
                 )
