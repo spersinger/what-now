@@ -94,7 +94,7 @@ class CommandInterpreter:
         self.commands = list()
 
         self.llm = Llama(
-            model_path=r"C:\Users\ethan\SeniorProject\what-now\qwen2.5-coder-1.5b-instruct-q4_0.gguf",
+            model_path="models/qwen2.5-coder-1.5b-instruct-q4_0.gguf",
             n_ctx=1024,  # Context window
             n_threads=10  # CPU threads
 
