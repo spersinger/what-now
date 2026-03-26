@@ -308,7 +308,7 @@ class CommandInterpreter:
                     # default = +1 hour
                     event_end = Time(hour + 1 if hour < 23 else 23, minute)
 
-        return TimeRange(t1=event_start, t2=event_end)
+        return TimeRange(event_start, event_end)
 
 
     #manual parse for notifications
@@ -473,8 +473,15 @@ class CommandInterpreter:
                 )
 
                 self.commands.append(Command(CommandType.SEARCH, event))
+
+            ##TODO: come up with a better way to edit
+            #How to extract new and old dates with AI Model?
+            #manually parse if it is edit?
+            # right now only searching based on name, editing everything else
             elif cmd_type == "EDIT":
                 # name of the event to edit
+
+                # using this for both old and new right now
                 target_name = cmd_data["name"]
 
                 # new values (some might be None if not changed)
@@ -483,6 +490,16 @@ class CommandInterpreter:
                 new_time = self.parse_time(cmd_data.get("start_time"), cmd_data.get("end_time")) if cmd_data.get("start_time") else None
                 new_notifs = self.parse_notifications(cmd_data.get("notifications")) if cmd_data.get("notifications") else None
                 new_repeat = self.parse_repeat(cmd_data.get("repeat")) if cmd_data.get("repeat") else None
+
+                # Create a CalendarEvent for old values to search
+                search_event = CalendarEvent(
+                    name=target_name,
+                    desc=None,
+                    notifs=[],
+                    dates=None,
+                    times=None,
+                    repeat=new_repeat
+                )
 
                 # Create a CalendarEvent only for the new values
                 updated_event = CalendarEvent(
@@ -494,7 +511,7 @@ class CommandInterpreter:
                     repeat=new_repeat
                 )
 
-                self.commands.append(Command(CommandType.EDIT, updated_event))
+                self.commands.append(Command(CommandType.EDIT,data= (search_event, updated_event) ))
 
 
     #manually add command to queue
