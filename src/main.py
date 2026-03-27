@@ -118,12 +118,7 @@ class NavButton(Button):
     screen_name =StringProperty("")
 
 class Root(BoxLayout):
-    # Believe that this is fixed - if I understood it correctly
-    # TODO, fix this, it is janky but works.
-    # The issue is that passing arguments from a .kv file is sorta hit or miss
-    # so I hard code the screen_name onto the buttons, and then just 
-    # don't use the screen name that is passed? I actually don't entirely know 
-    # why this works, but it does so...
+
     def set_active(self, screen_name):
         sm = self.ids.sm
 

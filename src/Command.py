@@ -94,7 +94,7 @@ class CommandInterpreter:
         self.commands = list()
 
         self.llm = Llama(
-            model_path="models/qwen2.5-coder-1.5b-instruct-q4_0.gguf",
+            model_path=r"C:\Users\ethan\SeniorProject\what-now\qwen2.5-coder-1.5b-instruct-q4_0.gguf",
             n_ctx=1024,  # Context window
             n_threads=10  # CPU threads
 
@@ -109,11 +109,19 @@ class CommandInterpreter:
 
         INSTRUCTIONS:
         1. Identify each command (ADD, DELETE, EDIT, SEARCH)
+            - For EDIT commands use the EDIT format:
+                - "target" = existing event info to find (old values)
+                - "updates" = new values to apply
+                    - if a value is in target do not re use it in updates (except for name)
+                        - e.g., if there are two dates, use the first for target and other for updates
+                - Only include fields that are mentioned
+            - For other commands (ADD, DELETE, SEARCH) use the STANDARD format:
+                - Ignore "target" and "updates" (set them to null)
         2. Extract event name for each command (event name should be after the command)
         3. Extract a short event description:
             - Include only words that describe the event itself
             - Exclude weekdays, date, time, repeat, and notification phrases
-            - If no extra description is provided, return null
+            - null if none
         4. Extract date (natural language allowed, e.g., "monday", "dec 8")
             -start_date:
                 - If the user specifies a day of the week (e.g., "monday", "tuesday"), or "tomorrow", return the day name as-is instead of a numeric date.
@@ -135,28 +143,55 @@ class CommandInterpreter:
         9. If information is missing, use null
         10. Output ONLY valid JSON, no explanation
 
-        OUTPUT FORMAT:
+        STANDARD FORMAT:
         {{
           "commands": [
             {{
-              "type": "ADD|DELETE|EDIT|SEARCH",
+              "type": "ADD|DELETE|SEARCH",
               "name": "event name",
               "description": null,
               "notifications": [],
               "date": {{
                 "start_date": null,
                 "end_date": null
-                }}
+            }},
               "start_time": "time",
               "end_time": null,
               "repeat": {{
                 "pattern": null,
                 "duration": null
-                }}
-              
-            }}
-          ]
+            }},
         }}
+        ]
+        }}
+        
+        EDIT FORMAT:
+        {{
+        "commands": [
+            {{
+             "type": "EDIT",
+             "target": {{
+                "name": "...",
+                "date": "...",
+                "start_time": null
+            }},
+            "updates": {{
+                "date": {{
+                "start_date": null,
+                "end_date": null
+            }},
+                "start_time": null,
+                "end_time": null,
+                "description": null,
+                "notifications": [],
+                "repeat": {{
+                "pattern": null,
+                "duration": null
+                }}
+              }}
+            ]
+            }}
+            }}
 
         JSON:"""
 
@@ -345,8 +380,13 @@ class CommandInterpreter:
     def parse_repeat(self, repeat_data, start,end) -> Repeat:
         # repeat_data is a dictionary from the AI model
 
-        pattern = repeat_data.get("pattern")
-        duration = repeat_data.get("duration")
+        if repeat_data:
+            pattern = repeat_data.get("pattern")
+            duration = repeat_data.get("duration")
+        else:
+            pattern = None
+            duration = None
+
 
         day_map = {
             "Monday": "m",
@@ -362,10 +402,7 @@ class CommandInterpreter:
         start_dow= day_map[start.strftime("%A")]
         end_dow = day_map[end.strftime("%A")]
 
-        #I think i got this fixed already,
-        #leaving it here just incase, it could
-        #use another set of eyes
-        ##TODO: Fix parsing for cycle and duration
+        ##TODO: Fix parsing for cycle and duration (LET IT BE NONE)
         # Handle cycle
         if pattern is None:
             repeat_cycle = RepeatCycle("day",start_dow )  # default
@@ -413,25 +450,26 @@ class CommandInterpreter:
         for cmd_data in result["commands"]:
             cmd_type = cmd_data["type"]
 
-            name = cmd_data["name"]
-            desc = cmd_data["description"]
-
-            # date
-            start_date = self.parse_date(cmd_data["date"]["start_date"])
-            end_date = self.parse_date(cmd_data["date"]["end_date"])
-            # time
-            time_range = self.parse_time(
-                cmd_data["start_time"],
-                cmd_data["end_time"]
-            )
-
-            # notifications
-            notifs = self.parse_notifications(cmd_data["notifications"])
-
-            # repeat
-            repeat = self.parse_repeat(cmd_data["repeat"],start_date, end_date)
 
             if cmd_type == "ADD":
+
+                name = cmd_data["name"]
+                desc = cmd_data["description"]
+
+                # date
+                start_date = self.parse_date(cmd_data["date"]["start_date"])
+                end_date = self.parse_date(cmd_data["date"]["end_date"])
+                # time
+                time_range = self.parse_time(
+                    cmd_data["start_time"],
+                    cmd_data["end_time"]
+                )
+
+                # notifications
+                notifs = self.parse_notifications(cmd_data["notifications"])
+
+                # repeat
+                repeat = self.parse_repeat(cmd_data["repeat"], start_date, end_date)
 
                 event = CalendarEvent(
                     name=name,
@@ -444,6 +482,25 @@ class CommandInterpreter:
 
                 self.commands.append(Command(CommandType.ADD, event))
             elif cmd_type == "DELETE":
+
+                name = cmd_data["name"]
+                desc = cmd_data["description"]
+
+                # date
+                start_date = self.parse_date(cmd_data["date"]["start_date"])
+                end_date = self.parse_date(cmd_data["date"]["end_date"])
+                # time
+                time_range = self.parse_time(
+                    cmd_data["start_time"],
+                    cmd_data["end_time"]
+                )
+
+                # notifications
+                notifs = self.parse_notifications(cmd_data["notifications"])
+
+                # repeat
+                repeat = self.parse_repeat(cmd_data["repeat"], start_date, end_date)
+
                 #for delete we should only need a name and date?
                 #maybe time?
                 #so what should we set description, notifs, repeat to?
@@ -459,6 +516,25 @@ class CommandInterpreter:
 
                 self.commands.append(Command(CommandType.DELETE, event))
             elif cmd_type == "SEARCH":
+
+                name = cmd_data["name"]
+                desc = cmd_data["description"]
+
+                # date
+                start_date = self.parse_date(cmd_data["date"]["start_date"])
+                end_date = self.parse_date(cmd_data["date"]["end_date"])
+                # time
+                time_range = self.parse_time(
+                    cmd_data["start_time"],
+                    cmd_data["end_time"]
+                )
+
+                # notifications
+                notifs = self.parse_notifications(cmd_data["notifications"])
+
+                # repeat
+                repeat = self.parse_repeat(cmd_data["repeat"], start_date, end_date)
+
                 #for search we should only need a name and date?
                 #maybe time?
                 #so what should we set description, notifs, repeat to?
@@ -474,43 +550,69 @@ class CommandInterpreter:
 
                 self.commands.append(Command(CommandType.SEARCH, event))
 
-            ##TODO: come up with a better way to edit
-            #How to extract new and old dates with AI Model?
-            #manually parse if it is edit?
-            # right now only searching based on name, editing everything else
+            ##TODO: dont want to search based on a repeat, but can't be None
+            # same for update, dont always want to update the repeat, but it can't be None
+            # only searching based on name and date
             elif cmd_type == "EDIT":
                 # name of the event to edit
 
-                # using this for both old and new right now
-                target_name = cmd_data["name"]
+                # using this for both old and new right (cant change name)
+                target_name = cmd_data["target"]["name"]
+                target_date = self.parse_date(cmd_data["target"]["date"]["start_date"])
 
-                # new values (some might be None if not changed)
-                new_desc = cmd_data.get("description")
-                new_date = self.parse_date(cmd_data.get("date")) if cmd_data.get("date") else None
-                new_time = self.parse_time(cmd_data.get("start_time"), cmd_data.get("end_time")) if cmd_data.get("start_time") else None
-                new_notifs = self.parse_notifications(cmd_data.get("notifications")) if cmd_data.get("notifications") else None
-                new_repeat = self.parse_repeat(cmd_data.get("repeat")) if cmd_data.get("repeat") else None
+                #put all update info in updates
+                updates = cmd_data["updates"]
+
+                # get all the update data or set them to null
+                if updates.get("start_time") or updates.get("end_time"):
+                    update_time = self.parse_time(
+                        updates.get("start_time"),
+                        updates.get("end_time")
+                    )
+                else:
+                    update_time = None
+                if updates.get("description"):
+                    update_desc = updates.get("description")
+                else:
+                    update_desc = None
+                if updates.get("notifications"):
+                    update_notif = self.parse_notifications(updates.get("notifications"))
+                else:
+                    update_notif = None
+
+                update_dates = cmd_data["updates"].get("date")
+
+                if update_dates:
+                    update_sd = self.parse_date(update_dates.get("start_date"))
+                    update_ed = self.parse_date(update_dates.get("end_date"))
+                else:
+                    update_sd = None
+                    update_ed = None
 
                 # Create a CalendarEvent for old values to search
                 search_event = CalendarEvent(
                     name=target_name,
                     desc=None,
                     notifs=[],
-                    dates=None,
+                    dates=DateRange(target_date,target_date),
                     times=None,
-                    repeat=new_repeat
+                    # repeat needs to be none, dont want to search with it
+                    repeat=Repeat(RepeatCycle("day","m"),RepeatDuration("times", 0))
                 )
 
                 # Create a CalendarEvent only for the new values
                 updated_event = CalendarEvent(
                     name=target_name,
-                    desc=new_desc,
-                    notifs=new_notifs,
-                    dates=new_date,
-                    times=new_time,
-                    repeat=new_repeat
+                    desc=update_desc,
+                    notifs=update_notif,
+                    dates=DateRange(update_sd,update_ed),
+                    times=update_time,
+                    #repeat needs to accept None in case it doesn't need to be changed
+                    repeat=Repeat(RepeatCycle("day","m"),RepeatDuration("times", 0))
                 )
-
+                # prints are just here to test the data, looking pretty good
+                print(search_event)
+                print(updated_event)
                 self.commands.append(Command(CommandType.EDIT,data= (search_event, updated_event) ))
 
 
