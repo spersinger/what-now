@@ -94,7 +94,7 @@ class CommandInterpreter:
         self.commands = list()
 
         self.llm = Llama(
-            model_path=r"C:\Users\ethan\SeniorProject\what-now\qwen2.5-coder-1.5b-instruct-q4_0.gguf",
+            model_path="models/qwen2.5-coder-1.5b-instruct-q4_0.gguf",
             n_ctx=1024,  # Context window
             n_threads=10  # CPU threads
 
@@ -113,7 +113,7 @@ class CommandInterpreter:
                 - "target" = existing event info to find (old values)
                 - "updates" = new values to apply
                     - if a value is in target do not re use it in updates (except for name)
-                        - e.g., if there are two dates, use the first for target and other for updates
+                        - e.g., if there are two dates, use the first for target and other for updates start_date
                 - Only include fields that are mentioned
             - For other commands (ADD, DELETE, SEARCH) use the STANDARD format:
                 - Ignore "target" and "updates" (set them to null)
