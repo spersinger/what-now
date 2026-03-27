@@ -10,6 +10,16 @@ from datetime import datetime
 from enum import Enum
 from typing import Tuple, List
 
+from pathlib import Path
+# Get the path to the project root (one level up from src)
+project_root = Path(__file__).resolve().parent.parent
+model = project_root / "models" / "qwen2.5-coder-1.5b-instruct-q4_0.gguf"
+
+
+# Check it exists
+if not model.exists():
+    raise ValueError(f"Model path does not exist: {model}")
+
 class CommandType(Enum):
     """Represents the different functions a Command can process."""
     
@@ -94,7 +104,7 @@ class CommandInterpreter:
         self.commands = list()
 
         self.llm = Llama(
-            model_path="models/qwen2.5-coder-1.5b-instruct-q4_0.gguf",
+            model_path=str(model),
             n_ctx=1024,  # Context window
             n_threads=10  # CPU threads
 
