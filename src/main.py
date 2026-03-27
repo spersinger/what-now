@@ -367,15 +367,8 @@ class Scanner(Screen):
 
 class Edit(Screen): pass
 class Root(BoxLayout):
-    # TODO, fix this, it is janky but works.
-    # The issue is that passing arguments from a .kv file is sorta hit or miss
-    # so I hard code the screen_name onto the buttons, and then just 
-    # don't use the screen name that is passed? I actually don't entirely know 
-    # why this works, but it does so...
     def set_active(self, screen_name):
         sm = self.ids.sm
-        # I guess this works here? Unsure why since printing screen name gives us
-        # nothing, but it still switches the screen with sm (screen manager id)
         sm.current = screen_name
 
         for btn_id, name in (

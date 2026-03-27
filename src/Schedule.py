@@ -11,9 +11,11 @@ class Schedule():
     events: List[List[CalendarEvent]] # repeating events grouped together
     
     def __init__(self):
+        # TODO: Pull events from iCal file
         self.events = []
         
-        
+    def __cleanup__(self): pass
+        # Save events to iCal file
         
     # returns the closest match;
     # search by name and optional date

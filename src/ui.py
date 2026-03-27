@@ -13,6 +13,10 @@ from kivy.uix.togglebutton import ToggleButton
 from kivy.uix.spinner import Spinner
 from kivy.uix.spinner import SpinnerOption
 from kivy.uix.checkbox import CheckBox
+from kivy.uix.behaviors import ButtonBehavior
+from kivy.uix.scrollview import ScrollView
+
+from datetime import date
 
 class ThemedCheckBox(CheckBox):
     pass
@@ -60,7 +64,7 @@ class HeaderLabel(Label):
 class VoiceTextInput(TextInput):
     pass
 
-class CalendarDayCell(BoxLayout):
+class CalendarDayCell(ButtonBehavior, BoxLayout):
     day_text = StringProperty("")
     day_color = ListProperty([1, 1, 1, 1])
     event_count = NumericProperty(0)
@@ -87,7 +91,46 @@ class CalendarDayCell(BoxLayout):
             )
             bars_container.add_widget(bar)
 
-class CalendarDayToday(BoxLayout):
+    def on_press(self):
+        from globals import user_schedule, command_interpreter
+
+        print(f"Day pressed: {self.day_text}")
+        root = BoxLayout(orientation='vertical', spacing=6, padding=10)
+        scroll = ScrollView(size_hint=(1, 1))
+        layout = BoxLayout(orientation='vertical', spacing=8, padding=[0, 0, 0, 10],
+                           size_hint_y=None)
+        layout.bind(minimum_height=layout.setter('height'))
+
+        scroll.add_widget(layout)
+
+        today = date.today()
+        date_pressed = date(today.year, today.month, int(self.day_text))
+        events = user_schedule.get_for_date(date_pressed)
+        root.add_widget(HeaderLabel(text=f"[b]Events for {str(date_pressed)}[/b]",
+                                    size_hint_y=None, halign='left')) 
+        if len(events) == 0:
+            layout.add_widget(EventItem(
+                event_type='No Events Today! Enjoy your day off!',
+                event_name="",
+                event_time="",
+                event_date=""
+            ))
+        else:
+            for i, ev in enumerate(events):
+                if i > 0:
+                    layout.add_widget(Widget(size_hint_y=None, height=1))
+                layout.add_widget(EventItem(
+                    event_type='Lecture',
+                    event_name=ev.name,
+                    event_time=str(ev.time_range.start_time) + " - " + str(ev.time_range.end_time),
+                    event_date=""
+                ))
+
+        root.add_widget(scroll)
+        popup = ThemedPopup(title=f"Events on {self.day_text}", content=root, size_hint=(0.9, 0.92))
+        popup.open()
+
+class CalendarDayToday(ButtonBehavior, BoxLayout):
     day_text = StringProperty("")
     event_count = NumericProperty(0)
 
@@ -112,6 +155,40 @@ class CalendarDayToday(BoxLayout):
                 size=lambda w, v: setattr(w._rect, "size", v),
             )
             bars_container.add_widget(bar)
+
+    def on_press(self):
+        from globals import user_schedule, command_interpreter
+
+        print(f"Day pressed: {self.day_text}")
+        root = BoxLayout(orientation='vertical', spacing=6, padding=10)
+        scroll = ScrollView(size_hint=(1, 1))
+        layout = BoxLayout(orientation='vertical', spacing=8, padding=[0, 0, 0, 10],
+                           size_hint_y=None)
+        layout.bind(minimum_height=layout.setter('height'))
+
+        scroll.add_widget(layout)
+        events = user_schedule.get_for_date(date.today())
+        if len(events) == 0:
+            layout.add_widget(EventItem(
+                event_type='No Events Today! Enjoy your day off!',
+                event_name="",
+                event_time="",
+                event_date=""
+            ))
+        else:
+            for i, ev in enumerate(events):
+                if i > 0:
+                    layout.add_widget(Widget(size_hint_y=None, height=1))
+                layout.add_widget(EventItem(
+                    event_type='Lecture',
+                    event_name=ev.name,
+                    event_time=str(ev.time_range.start_time) + " - " + str(ev.time_range.end_time),
+                    event_date=""
+                ))
+
+        root.add_widget(scroll)
+        popup = ThemedPopup(title=f"Events on {self.day_text}", content=root, size_hint=(0.9, 0.92))
+        popup.open()
 
 
 
