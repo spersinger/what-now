@@ -12,10 +12,23 @@ from kivy.animation import Animation
 from kivy.uix.progressbar import ProgressBar
 from typing import Optional
 
+
+
 from ui import *
 
 import time
 import pytesseract
+# this is for windows to find pytesseract
+#it does it differently than linux
+#we need to have pytesseract inside the what-now folder
+import sys
+from pathlib import Path
+if sys.platform.startswith("win"):
+    #explicitly set tesseract path
+    project_root = Path(__file__).resolve().parent.parent
+    pytesseract.pytesseract.tesseract_cmd = str(project_root / "pytesseract" / "tesseract.exe")
+
+
 import numpy as np
 import cv2
 from PIL import Image
@@ -56,6 +69,8 @@ class DocumentScanner(BoxLayout):
         # Gen AI parser
         self.parser = LocalSyllabusParser()
         self.extracted_json = Optional[str]
+
+
 
     # TODO: Actually implement this, as it stands upload is completely broken because I can't test it on my computer due to my broken touchscreen.
     def upload(self):

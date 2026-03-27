@@ -42,6 +42,8 @@ from Command import CommandInterpreter
 from Voice import Voice
 from document_scanner import DocumentScanner
 from ui import *
+from kivy.uix.camera import Camera
+from kivy.clock import Clock
 
 
 # global data objects: schedule, command interpreter
@@ -101,6 +103,7 @@ class Home(Screen):
 
         self.build_events(events)
 
+
 class Voice(Screen): pass
 
 class Scanner(Screen):
@@ -108,7 +111,8 @@ class Scanner(Screen):
         self.ids.cam_view.ids.camera.play = True
 
     def on_leave(self):
-        self.ids.cam_view.ids.camera.play = False
+        self.ids.cam_view.ids.camera.play = True
+
 
 class Edit(Screen): pass
 
