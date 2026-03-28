@@ -119,6 +119,7 @@ class CommandInterpreter:
 
         INSTRUCTIONS:
         1. Identify each command (ADD, DELETE, EDIT, SEARCH)
+            - There may be multiple commands in the text
             - For EDIT commands use the EDIT format:
                 - "target" = existing event info to find (old values)
                 - "updates" = new values to apply
