@@ -161,7 +161,7 @@ class Voice(Screen):
         content = BoxLayout(orientation='vertical', padding=10, spacing=10, size_hint = (1,1))
         button_box = BoxLayout(orientation='horizontal', padding=10, spacing=10)
 
-        if command.c_type == CommandType.ADD or command.c_type == CommandType.DELETE:
+        if command.c_type == CommandType.ADD:
 
             command_label = Label(text='Command:', size_hint_y=None, height=30, halign='left')
             command_label.bind(size=lambda s, w: s.setter('text_size')(s, (s.width, None)))
@@ -253,6 +253,101 @@ class Voice(Screen):
 
             content.add_widget(repeat_label)
             content.add_widget(repeat_input)
+
+        elif command.c_type == CommandType.DELETE or command.c_type == CommandType.SEARCH :
+            command_label = Label(text='Command:', size_hint_y=None, height=30, halign='left')
+            command_label.bind(size=lambda s, w: s.setter('text_size')(s, (s.width, None)))
+            command_input = TextInput(
+                text=str(command.c_type),
+                multiline=True,
+                size_hint_x=1,
+                size_hint_y=None,
+                height=35
+            )
+
+            name_label = Label(text='Name:', size_hint_y=None, height=30, halign='left')
+            name_label.bind(size=lambda s, w: s.setter('text_size')(s, (s.width, None)))
+            name_text_input = TextInput(
+                text=str(command.data.name),
+                multiline=True,
+                size_hint_x=1,
+                size_hint_y=None,
+                height=35
+            )
+            # add command and name labels and input
+            content.add_widget(command_label)
+            content.add_widget(command_input)
+
+            content.add_widget(name_label)
+            content.add_widget(name_text_input)
+
+            # ONLY SHOW THE REST IF THEY ARE CHANGED
+            if command.data.description:
+                desc_label = Label(text='New Desc:', size_hint_y=None, height=30, halign='left')
+                desc_label.bind(size=lambda s, w: s.setter('text_size')(s, (s.width, None)))
+                desc_input = TextInput(
+                    text=str(command.data.description),
+                    multiline=True,
+                    size_hint_x=1,
+                    size_hint_y=None,
+                    height=35
+                )
+                content.add_widget(desc_label)
+                content.add_widget(desc_input)
+
+            if command.data.notif_times:
+                notif_label = Label(text='New notifications:', size_hint_y=None, height=30, halign='left')
+                notif_label.bind(size=lambda s, w: s.setter('text_size')(s, (s.width, None)))
+                notif_input = TextInput(
+                    text=str(command.data.notif_times),
+                    multiline=True,
+                    size_hint_x=1,
+                    size_hint_y=None,
+                    height=35
+                )
+
+                content.add_widget(notif_label)
+                content.add_widget(notif_input)
+
+            if command.data.date_range:
+                date_label = Label(text='New Date range:', size_hint_y=None, height=30, halign='left')
+                date_label.bind(size=lambda s, w: s.setter('text_size')(s, (s.width, None)))
+                date_input = TextInput(
+                    text=str(command.data.date_range),
+                    multiline=True,
+                    size_hint_x=1,
+                    size_hint_y=None,
+                    height=35
+                )
+                content.add_widget(date_label)
+                content.add_widget(date_input)
+
+            if command.data.time_range:
+                time_label = Label(text='New Time:', size_hint_y=None, height=30, halign='left')
+                time_label.bind(size=lambda s, w: s.setter('text_size')(s, (s.width, None)))
+                time_input = TextInput(
+                    text=str(command.data.time_range),
+                    multiline=True,
+                    size_hint_x=1,
+                    size_hint_y=None,
+                    height=35
+                )
+                content.add_widget(time_label)
+                content.add_widget(time_input)
+
+            if command.data.repeat:
+                repeat_label = Label(text='New Repeat:', size_hint_y=None, height=30, halign='left')
+                repeat_label.bind(size=lambda s, w: s.setter('text_size')(s, (s.width, None)))
+                repeat_input = TextInput(
+                    text=str(command.data.repeat),
+                    multiline=True,
+                    size_hint_x=1,
+                    size_hint_y=None,
+                    height=35
+                )
+
+                content.add_widget(repeat_label)
+                content.add_widget(repeat_input)
 
         elif command.c_type == CommandType.EDIT:
 
