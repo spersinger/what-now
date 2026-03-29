@@ -1,9 +1,10 @@
-from CalendarEvent import CalendarEvent, DateRange, TimeRange, Repeat, NotifTime, TimeType, RepeatDuration, RepeatCycle, Day
+from CalendarEvent import CalendarEvent, DateRange, TimeRange, Repeat, NotifTime, TimeType, RepeatDuration, RepeatCycle, \
+    Day
 from datetime import date as Date, time as Time, timedelta
 from local_syllabus_parser import LocalSyllabusParser
 from llama_cpp import Llama
 import json
-#re for expression recognition (used to parse date and time)
+# re for expression recognition (used to parse date and time)
 import re
 from datetime import datetime
 
@@ -11,23 +12,23 @@ from enum import Enum
 from typing import Tuple, List
 
 from pathlib import Path
+
 # Get the path to the project root (one level up from src)
 project_root = Path(__file__).resolve().parent.parent
 model = project_root / "models" / "qwen2.5-coder-1.5b-instruct-q4_0.gguf"
-
 
 # Check it exists
 if not model.exists():
     raise ValueError(f"Model path does not exist: {model}")
 
+
 class CommandType(Enum):
     """Represents the different functions a Command can process."""
-    
+
     SEARCH = 0
     EDIT = 1
     ADD = 2
     DELETE = 3
-
 
 
 # command
@@ -35,47 +36,45 @@ class CommandType(Enum):
 class Command:
     """
     Holds information about an event and what to do with it.
-    
+
     Command Types:
     --------------
-    
-    SEARCH: 
+
+    SEARCH:
         - retrieve information about an event.
         - data is a CalendarEvent whose entries are used as search terms
-        
+
     EDIT:
         - modify an existing event or series of events.
         - data is a pair of CalendarEvents (tuple):
             - first's fields are used as search terms (find event to modify)
             - second is what fields to modify (to leave unchanged, use None)
-    
-    ADD: 
-        - add a new event to the schedule. 
+
+    ADD:
+        - add a new event to the schedule.
         - data is the CalendarEvent to add (if repeating, will add all repeats).
 
-    
-    DELETE: 
+
+    DELETE:
         - remove an event or series of events.
         - data is a CalendarEvent whose search terms are used to find the event.
-    
+
     """
-    
+
     c_type: CommandType
-    data: CalendarEvent | Tuple[CalendarEvent, CalendarEvent] # if 2: first is search, 2nd is modifier
-    
-    def __init__(self, c_type:CommandType, data:CalendarEvent|Tuple[CalendarEvent, CalendarEvent]):
+    data: CalendarEvent | Tuple[CalendarEvent, CalendarEvent]  # if 2: first is search, 2nd is modifier
+
+    def __init__(self, c_type: CommandType, data: CalendarEvent | Tuple[CalendarEvent, CalendarEvent]):
         self.c_type = c_type
         self.data = data
-    
-    
-    
+
+
 # a status code from the schedule
 class StatusCode(Enum):
     SUCCESS = 0
     ERROR = 0
-    
-    
-    
+
+
 # response
 # holds information returned by schedule
 # correlates to exactly one command
@@ -84,22 +83,21 @@ class Response:
     status: StatusCode
     status_details: str
     data = None
-    
+
     def __init__(self):
         self.status = StatusCode.SUCCESS
         self.status_details = ""
         self.data = None
-    
-    
-    
+
+
 # command interpreter
 # transforms text input into a list of commands (to eventually send to the schedule)
 class CommandInterpreter:
     """Transforms text input into a series of Commands."""
-    
+
     # commands to be sent to the schedule
     commands: List[Command]
-    
+
     def __init__(self):
         self.commands = list()
 
@@ -110,7 +108,7 @@ class CommandInterpreter:
 
         )
 
-    #AI model for parsing commands
+    # AI model for parsing commands
     def parse_command(self, text: str) -> dict:
         prompt = f"""You are a JSON extraction assistant. Parse the following user input into structured commands.
 
@@ -135,16 +133,19 @@ class CommandInterpreter:
             - If a new time is provided, set updates.start_time and/or updates.end_time accordingly
             - Do not apply default times like you do for ADD commands
         - For all commands, include all fields; set missing fields to null
+        - Extract date (natural language allowed, e.g., "monday", "dec 8")
+            -start_date:
+                - If the user specifies a day of the week (e.g., "monday", "tuesday"), or "tomorrow", return the day name as-is instead of a numeric date.
             -for all dates, if year is missing assume 2026
             -if end_date is missing, make it the same as start_date
-            -if end_time is missing, make it 1 hour after start_time
+            -if there is only one time, make end_time 1 hour after start_time
             - for repeat:
                 - repeat pattern (e.g., "every day", "every week", "every month" "every year") or null
                 - repeat duration:
                     - "forever"
                     - "X times" (e.g., "5 times")
                     - "until DATE" (e.g., "until dec 10")
-        
+
         OUTPUT FORMAT:
         - JSON object with a top-level key "commands", which is a list
         - ADD/DELETE/SEARCH example:
@@ -168,7 +169,7 @@ class CommandInterpreter:
         }}
         ]
         }}
-        
+
         -EDIT example:
         {{
         "commands": [
@@ -202,15 +203,13 @@ class CommandInterpreter:
             - If a field is missing or unknown, set it to null.
         JSON:"""
 
-
-
         response = self.llm.create_chat_completion(
             messages=[{
                 "role": "user",
                 "content": prompt
             }],
             temperature=0.1,
-            max_tokens=500,
+            max_tokens=1500,
             response_format={"type": "json_object"}
         )
 
@@ -222,7 +221,7 @@ class CommandInterpreter:
             print(f"Failed to parse JSON: {e}")
             return {"error": "Failed to parse JSON"}
 
-    #manual parsing for date
+    # manual parsing for date
     def parse_date(self, date_str: str) -> Date:
         date_str = date_str.lower()
 
@@ -279,7 +278,7 @@ class CommandInterpreter:
 
         return event_date
 
-    #manual parse for time:
+    # manual parse for time:
     def parse_time(self, start_str: str, end_str: str = None) -> TimeRange:
         # default
         event_start = Time(12, 0)
@@ -354,8 +353,7 @@ class CommandInterpreter:
 
         return TimeRange(event_start, event_end)
 
-
-    #manual parse for notifications
+    # manual parse for notifications
     def parse_notifications(self, notif_list) -> list:
         notifs = []
 
@@ -385,8 +383,8 @@ class CommandInterpreter:
 
         return notifs
 
-    #manual parse for repeat
-    def parse_repeat(self, repeat_data, start,end) -> Repeat:
+    # manual parse for repeat
+    def parse_repeat(self, repeat_data, start, end) -> Repeat:
         # repeat_data is a dictionary from the AI model
 
         if repeat_data:
@@ -395,7 +393,6 @@ class CommandInterpreter:
         else:
             pattern = None
             duration = None
-
 
         day_map = {
             "Monday": "m",
@@ -407,14 +404,14 @@ class CommandInterpreter:
             "Sunday": "u"
         }
 
-        #convert start and end to day of week
-        start_dow= day_map[start.strftime("%A")]
+        # convert start and end to day of week
+        start_dow = day_map[start.strftime("%A")]
         end_dow = day_map[end.strftime("%A")]
 
         ##TODO: Fix parsing for cycle and duration (LET IT BE NONE)
         # Handle cycle
         if pattern is None:
-            repeat_cycle = RepeatCycle("day",start_dow )  # default
+            repeat_cycle = RepeatCycle("day", start_dow)  # default
         elif pattern.lower() == "every day":
             repeat_cycle = RepeatCycle("day", start_dow)
         elif pattern.lower() == "every week":
@@ -444,21 +441,19 @@ class CommandInterpreter:
 
     # interpret text input and create one or more commands based on it
     # (use AI model to transform text into list of commands)
-    def generate_commands(self, text:str):
+    def generate_commands(self, text: str):
         '''Receives text input
         Uses AI model to parse for each commands data
         then manual parses what the AI model returns
         appends each command to the commands list
         '''
 
-
-        #AI parsing of the input
+        # AI parsing of the input
         result = self.parse_command(text)
 
-        #for each command that the AI finds
+        # for each command that the AI finds
         for cmd_data in result["commands"]:
             cmd_type = cmd_data["type"]
-
 
             if cmd_type == "ADD":
 
@@ -484,7 +479,7 @@ class CommandInterpreter:
                     name=name,
                     desc=desc,
                     notifs=notifs,
-                    dates=DateRange(start_date,end_date),
+                    dates=DateRange(start_date, end_date),
                     times=time_range,
                     repeat=repeat
                 )
@@ -510,17 +505,17 @@ class CommandInterpreter:
                 # repeat
                 repeat = self.parse_repeat(cmd_data["repeat"], start_date, end_date)
 
-                #for delete we should only need a name and date?
-                #maybe time?
-                #so what should we set description, notifs, repeat to?
+                # for delete we should only need a name and date?
+                # maybe time?
+                # so what should we set description, notifs, repeat to?
 
                 event = CalendarEvent(
                     name=name,
                     desc=desc,
                     notifs=notifs,
-                    dates=DateRange(start_date,end_date),
+                    dates=DateRange(start_date, end_date),
                     times=time_range,
-                    repeat=repeat #should change this to None, but it is not accepted by repeat
+                    repeat=repeat  # should change this to None, but it is not accepted by repeat
                 )
 
                 self.commands.append(Command(CommandType.DELETE, event))
@@ -544,17 +539,17 @@ class CommandInterpreter:
                 # repeat
                 repeat = self.parse_repeat(cmd_data["repeat"], start_date, end_date)
 
-                #for search we should only need a name and date?
-                #maybe time?
-                #so what should we set description, notifs, repeat to?
+                # for search we should only need a name and date?
+                # maybe time?
+                # so what should we set description, notifs, repeat to?
 
                 event = CalendarEvent(
                     name=name,
                     desc=desc,
                     notifs=notifs,
-                    dates=DateRange(start_date,end_date),
+                    dates=DateRange(start_date, end_date),
                     times=time_range,
-                    repeat=repeat #should change this to None, but it is not accepted by repeat
+                    repeat=repeat  # should change this to None, but it is not accepted by repeat
                 )
 
                 self.commands.append(Command(CommandType.SEARCH, event))
@@ -569,7 +564,7 @@ class CommandInterpreter:
                 target_name = cmd_data["target"]["name"]
                 target_date = self.parse_date(cmd_data["target"]["date"]["start_date"])
 
-                #put all update info in updates
+                # put all update info in updates
                 updates = cmd_data["updates"]
 
                 # get all the update data or set them to null
@@ -603,10 +598,10 @@ class CommandInterpreter:
                     name=target_name,
                     desc=None,
                     notifs=[],
-                    dates=DateRange(target_date,target_date),
+                    dates=DateRange(target_date, target_date),
                     times=None,
                     # repeat needs to be none, dont want to search with it
-                    repeat=Repeat(RepeatCycle("day","m"),RepeatDuration("times", 0))
+                    repeat=Repeat(RepeatCycle("day", "m"), RepeatDuration("times", 0))
                 )
 
                 # Create a CalendarEvent only for the new values
@@ -614,18 +609,17 @@ class CommandInterpreter:
                     name=target_name,
                     desc=update_desc,
                     notifs=update_notif,
-                    dates=DateRange(update_sd,update_ed),
+                    dates=DateRange(update_sd, update_ed),
                     times=update_time,
-                    #repeat needs to accept None in case it doesn't need to be changed
-                    repeat=Repeat(RepeatCycle("day","m"),RepeatDuration("times", 0))
+                    # repeat needs to accept None in case it doesn't need to be changed
+                    repeat=Repeat(RepeatCycle("day", "m"), RepeatDuration("times", 0))
                 )
                 # prints are just here to test the data, looking pretty good
                 print(search_event)
                 print(updated_event)
-                self.commands.append(Command(CommandType.EDIT,data= (search_event, updated_event) ))
+                self.commands.append(Command(CommandType.EDIT, data=(search_event, updated_event)))
 
-
-    #manually add command to queue
+    # manually add command to queue
     # much faster (no AI model use)
-    def add_command(self, command:Command):
+    def add_command(self, command: Command):
         self.commands.append(command)
