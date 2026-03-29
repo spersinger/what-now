@@ -298,12 +298,12 @@ class Voice(Screen):
                 content.add_widget(desc_label)
                 content.add_widget(desc_input)
 
-            if new_event.notifications:
+            if new_event.notif_times:
 
                 notif_label = Label(text='New notifications:', size_hint_y=None, height=30, halign='left')
                 notif_label.bind(size=lambda s, w: s.setter('text_size')(s, (s.width, None)))
                 notif_input = TextInput(
-                    text=str(command.data.notif_times),
+                    text=str(new_event.notif_times),
                     multiline=True,
                     size_hint_x=1,
                     size_hint_y=None,
@@ -318,7 +318,7 @@ class Voice(Screen):
                 date_label = Label(text='New Date range:', size_hint_y=None, height=30, halign='left')
                 date_label.bind(size=lambda s, w: s.setter('text_size')(s, (s.width, None)))
                 date_input = TextInput(
-                    text=str(command.data.date_range),
+                    text=str(new_event.date_range),
                     multiline=True,
                     size_hint_x=1,
                     size_hint_y=None,
@@ -332,7 +332,7 @@ class Voice(Screen):
                 time_label = Label(text='New Time:', size_hint_y=None, height=30, halign='left')
                 time_label.bind(size=lambda s, w: s.setter('text_size')(s, (s.width, None)))
                 time_input = TextInput(
-                    text=str(command.data.time_range),
+                    text=str(new_event.time_range),
                     multiline=True,
                     size_hint_x=1,
                     size_hint_y=None,
@@ -346,7 +346,7 @@ class Voice(Screen):
                 repeat_label = Label(text='New Repeat:', size_hint_y=None, height=30, halign='left')
                 repeat_label.bind(size=lambda s, w: s.setter('text_size')(s, (s.width, None)))
                 repeat_input = TextInput(
-                    text=str(command.data.repeat),
+                    text=str(new_event.repeat),
                     multiline=True,
                     size_hint_x=1,
                     size_hint_y=None,
@@ -358,10 +358,10 @@ class Voice(Screen):
 
 
 
-        accept_btn = Button(text='Accept', size_hint=(1, 0.1))
+        accept_btn = Button(text='Accept', size_hint=(1,0.1))
         accept_btn.bind(on_press=lambda x: self.on_accept_command(app,command))
 
-        accept_all_btn = Button(text='Accept all', size_hint=(1, 0.1))
+        accept_all_btn = Button(text='Accept all', size_hint=(1,0.1))
         accept_all_btn.bind(on_press=lambda x: self.on_accept_all_commands(app))
 
         button_box.add_widget(accept_btn)

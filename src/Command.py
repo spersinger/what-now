@@ -117,44 +117,37 @@ class CommandInterpreter:
         USER INPUT:
         {text}
 
-        INSTRUCTIONS:
-        1. Identify each command (ADD, DELETE, EDIT, SEARCH)
-            - There may be multiple commands in the text
-            - For EDIT commands use the EDIT format:
-                - "target" = existing event info to find (old values)
-                - "updates" = new values to apply
-                    - if a value is in target do not re use it in updates (except for name)
-                        - e.g., if there are two dates, use the first for target and other for updates start_date
-                - Only include fields that are mentioned
-            - For other commands (ADD, DELETE, SEARCH) use the STANDARD format:
-                - Ignore "target" and "updates" (set them to null)
-        2. Extract event name for each command (event name should be after the command)
-        3. Extract a short event description:
-            - Include only words that describe the event itself
-            - Exclude weekdays, date, time, repeat, and notification phrases
-            - null if none
-        4. Extract date (natural language allowed, e.g., "monday", "dec 8")
-            -start_date:
-                - If the user specifies a day of the week (e.g., "monday", "tuesday"), or "tomorrow", return the day name as-is instead of a numeric date.
-                - if there are two dates use the first date for start_date
-            -end_date:
-                -if there is only one date, use it for both start_date and end_date
-                - if there is two dates use the second one for end_date
-            - if the year is not mentioned, use 2026
-        5. Extract start_time (e.g., "8:00 am", 8 am)
-        6. Extract end_time (e.g., "8:00 am", 8 am) if present
-            - if only 1 time is present, assume it is start time, and make the end time 1 hour later
-        7. Extract repeat information:
-            - repeat pattern (e.g., "every day", "every week", "every month" "every year") or null
-            - repeat duration:
-                - "forever"
-                - "X times" (e.g., "5 times")
-                - "until DATE" (e.g., "until dec 10")
-        8. Extract notifications (e.g., "10 minutes before") as a list
-        9. If information is missing, use null
-        10. Output ONLY valid JSON, no explanation
-
-        STANDARD FORMAT:
+        RULES:
+        - Command types:
+            - IMPORTANT: the "words like" must always be mapped to the actual command type
+            - ADD: words like, "add", "create", "schedule", "make"
+            - DELETE: words like, "delete", "remove", "cancel"
+            - EDIT: words like, "move", "reschedule", "change", "update", "edit"
+            - SEARCH: find, show, what, list
+        - EDIT commands:
+            - The event name is the target
+            - target.date = null unless an old date is explicitly mentioned
+            - Any new date mentioned by the user goes only in updates
+                - If one new date is mentioned, set both updates.start_date and updates.end_date to that date
+                - If two new dates are mentioned, set the first to updates.start_date and the second to updates.end_date
+            - Never copy the old date from target into updates
+            - Do NOT fill start_time or end_time unless the user explicitly specifies a time
+            - If a new time is provided, set updates.start_time and/or updates.end_time accordingly
+            - Do not apply default times like you do for ADD commands
+        - For all commands, include all fields; set missing fields to null
+            -for all dates, if year is missing assume 2026
+            -if end_date is missing, make it the same as start_date
+            -if end_time is missing, make it 1 hour after start_time
+            - for repeat:
+                - repeat pattern (e.g., "every day", "every week", "every month" "every year") or null
+                - repeat duration:
+                    - "forever"
+                    - "X times" (e.g., "5 times")
+                    - "until DATE" (e.g., "until dec 10")
+        
+        OUTPUT FORMAT:
+        - JSON object with a top-level key "commands", which is a list
+        - ADD/DELETE/SEARCH example:
         {{
           "commands": [
             {{
@@ -176,7 +169,7 @@ class CommandInterpreter:
         ]
         }}
         
-        EDIT FORMAT:
+        -EDIT example:
         {{
         "commands": [
             {{
@@ -204,7 +197,12 @@ class CommandInterpreter:
             }}
             }}
 
+        Output ONLY valid JSON, no explanations.
+            - All commands must include all fields shown in the examples.
+            - If a field is missing or unknown, set it to null.
         JSON:"""
+
+
 
         response = self.llm.create_chat_completion(
             messages=[{
@@ -212,7 +210,7 @@ class CommandInterpreter:
                 "content": prompt
             }],
             temperature=0.1,
-            max_tokens=200,
+            max_tokens=500,
             response_format={"type": "json_object"}
         )
 
