@@ -21,16 +21,18 @@ class Schedule():
     # search by name and optional date
     def search_events(self, search_term:CalendarEvent) -> Tuple[CalendarEvent, int, int]:
         name = search_term.name
-        date = search_term.date_range.start_date # start date: search term
         
         match: Tuple[CalendarEvent, int, int]
         
         # if no date, assume search is for whole group
         # TODO: necessary? figure out use case if so
         if search_term.date_range is None:
+            print("Date range null")
             for g_idx, group in enumerate(self.events):
                 if group[0].name == search_term.name:
                     return (group[0], g_idx, None)
+        else:
+            date = search_term.date_range.start_date # start date: search term
             
         # otherwise, find single event match
         for g_idx, group in enumerate(self.events):

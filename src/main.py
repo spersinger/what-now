@@ -45,8 +45,8 @@ from globals import user_schedule, command_interpreter
 
 import calendar
 
+# TODO: Move to seperate file
 class Home(Screen):
-
     def add_event(self, event: CalendarEvent):
         user_schedule.add_event(event)
         self.refresh()
@@ -90,7 +90,7 @@ class Home(Screen):
             for i, ev in enumerate(events):
                 if i > 0:
                     box.add_widget(Widget(size_hint_y=None, height=1))
-                box.add_widget(EventItem(
+                box.add_widget(EditEventItem(
                     event_type='Lecture',
                     event_name=ev.name,
                     event_time=str(ev.time_range.start_time) + " - " + str(ev.time_range.end_time),
@@ -115,8 +115,69 @@ class Home(Screen):
             times=TimeRange("12:30p", "1:45p"),
             repeat=Repeat("week tr", "forever")
         ))
+        search_event_btn = self.ids.search_event_button
+        search_event_btn.bind(on_release=lambda *a: self.search_event_popup())
         add_event_btn = self.ids.add_event_button
         add_event_btn.bind(on_release=lambda *a: self.add_event_popup())
+
+    def search_event_popup(self):
+        '''
+        Popup to create and add a new CalendarEvent.
+        - Scroll wheel pickers for date and time
+        - Checkboxes for repeat days
+        - Toggle buttons for repeat frequency / end
+        '''
+        root = BoxLayout(orientation='vertical', spacing=6, padding=10)
+        scroll = ScrollView(size_hint=(1, 1))
+        layout = BoxLayout(orientation='vertical', spacing=8, padding=[0, 0, 0, 10],
+                           size_hint_y=None)
+        layout.bind(minimum_height=layout.setter('height'))
+        layout.add_widget(Widget(size_hint_y=None, height=1))
+
+        scroll.add_widget(layout)
+
+        search_bar = BoxLayout(orientation='horizontal', spacing=6, padding=10)
+        name_input = TextInput(hint_text="e.g. Intro to Computing",
+                               multiline=False, size_hint_y=None, height=40)
+        search_button = PrimaryButton(text="Search", size_hint_x=0.15, 
+                                      size_hint_y=None, height=44)
+
+        root.add_widget(Label(text="Event Name *", size_hint_y=None, height=28,
+                              halign='left', valign='middle'))
+        search_bar.add_widget(name_input)
+        search_bar.add_widget(search_button)
+        root.add_widget(search_bar)
+        root.add_widget(scroll)
+        search_button.bind(on_release=lambda *a: self.search_events(name_input.text, layout))
+
+        popup = ThemedPopup(title="", content=root, size_hint=(0.9, 0.92))
+        popup.open()
+
+    def search_events(self, search_term, layout):
+        search_event = CalendarEvent(
+                name= search_term,
+                desc= None,
+                notifs= None,
+                dates= DateRange(date.today(), date.today()),
+                times= None,
+                repeat= None,
+                )
+        result = user_schedule.search_events(search_event)
+        if result is None:
+            layout.add_widget(EventItem(
+                event_type='No events found!',
+                event_name="",
+                event_time="",
+                event_date=""
+            ))
+        else:
+            ev, g_idx, e_idx = result  # unpack the tuple
+            layout.add_widget(EditEventItem(
+                event_type='Lecture',
+                event_name=ev.name,
+                event_time=str(ev.time_range.start_time) + " - " + str(ev.time_range.end_time),
+                event_date=""
+            ))
 
     def add_event_popup(self):
         '''

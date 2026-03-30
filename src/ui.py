@@ -18,6 +18,8 @@ from kivy.uix.scrollview import ScrollView
 
 from datetime import date
 
+from CalendarEvent import *
+
 class ThemedCheckBox(CheckBox):
     pass
 
@@ -119,7 +121,7 @@ class CalendarDayCell(ButtonBehavior, BoxLayout):
             for i, ev in enumerate(events):
                 if i > 0:
                     layout.add_widget(Widget(size_hint_y=None, height=1))
-                layout.add_widget(EventItem(
+                layout.add_widget(EditEventItem(
                     event_type='Lecture',
                     event_name=ev.name,
                     event_time=str(ev.time_range.start_time) + " - " + str(ev.time_range.end_time),
@@ -127,7 +129,7 @@ class CalendarDayCell(ButtonBehavior, BoxLayout):
                 ))
 
         root.add_widget(scroll)
-        popup = ThemedPopup(title=f"Events on {self.day_text}", content=root, size_hint=(0.9, 0.92))
+        popup = ThemedPopup(title="", content=root, size_hint=(0.9, 0.92))
         popup.open()
 
 class CalendarDayToday(ButtonBehavior, BoxLayout):
@@ -167,7 +169,12 @@ class CalendarDayToday(ButtonBehavior, BoxLayout):
         layout.bind(minimum_height=layout.setter('height'))
 
         scroll.add_widget(layout)
-        events = user_schedule.get_for_date(date.today())
+
+        today = date.today()
+        date_pressed = date(today.year, today.month, int(self.day_text))
+        events = user_schedule.get_for_date(date_pressed)
+        root.add_widget(HeaderLabel(text=f"[b]Events for {str(date_pressed)}[/b]",
+                                    size_hint_y=None, halign='left')) 
         if len(events) == 0:
             layout.add_widget(EventItem(
                 event_type='No Events Today! Enjoy your day off!',
@@ -179,7 +186,7 @@ class CalendarDayToday(ButtonBehavior, BoxLayout):
             for i, ev in enumerate(events):
                 if i > 0:
                     layout.add_widget(Widget(size_hint_y=None, height=1))
-                layout.add_widget(EventItem(
+                layout.add_widget(EditEventItem(
                     event_type='Lecture',
                     event_name=ev.name,
                     event_time=str(ev.time_range.start_time) + " - " + str(ev.time_range.end_time),
@@ -187,7 +194,7 @@ class CalendarDayToday(ButtonBehavior, BoxLayout):
                 ))
 
         root.add_widget(scroll)
-        popup = ThemedPopup(title=f"Events on {self.day_text}", content=root, size_hint=(0.9, 0.92))
+        popup = ThemedPopup(title="", content=root, size_hint=(0.9, 0.92))
         popup.open()
 
 
@@ -197,3 +204,21 @@ class EventItem(BoxLayout):
     event_name = StringProperty("")
     event_time = StringProperty("")
     event_date = StringProperty("")
+
+class EditEventItem(BoxLayout):
+    event_type = StringProperty("")
+    event_name = StringProperty("")
+    event_time = StringProperty("")
+    event_date = StringProperty("")
+
+    def edit_event(self):
+        from globals import user_schedule, command_interpreter
+
+        #search_event = CalendarEvent(
+                #name = self.event_name,
+                #desc = None,
+                #dates = DateRange(self.event_date, self.event_date),
+                #times = None,
+                #repeat = None
+                #)
+        #print(search_event)
