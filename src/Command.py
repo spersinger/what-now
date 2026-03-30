@@ -133,12 +133,12 @@ class CommandInterpreter:
             - If a new time is provided, set updates.start_time and/or updates.end_time accordingly
             - Do not apply default times like you do for ADD commands
         - For all commands, include all fields; set missing fields to null
-        - Extract date (natural language allowed, e.g., "monday", "dec 8")
-            -start_date:
-                - If the user specifies a day of the week (e.g., "monday", "tuesday"), or "tomorrow", return the day name as-is instead of a numeric date.
+        - Extract a description if there is one
+        - Extract date (natural language allowed, e.g., "tomorrow", "monday", "dec 8")
+            - If the user specifies a day of the week (e.g., "monday", "tuesday"), or "tomorrow", return the day name as-is instead of a numeric date.
             -for all dates, if year is missing assume 2026
             -if end_date is missing, make it the same as start_date
-            -if there is only one time, make end_time 1 hour after start_time
+        -If there is only one time, make end_time 1 hour after start_time
             - for repeat:
                 - repeat pattern (e.g., "every day", "every week", "every month" "every year") or null
                 - repeat duration:
@@ -177,7 +177,7 @@ class CommandInterpreter:
              "type": "EDIT",
              "target": {{
                 "name": "...",
-                "date": "...",
+                "date": null,
                 "start_time": null
             }},
             "updates": {{
@@ -223,7 +223,8 @@ class CommandInterpreter:
 
     # manual parsing for date
     def parse_date(self, date_str: str) -> Date:
-        date_str = date_str.lower()
+        if date_str:
+            date_str = date_str.lower()
 
         weekdays = {
             "monday": 0,
@@ -455,8 +456,8 @@ class CommandInterpreter:
         for cmd_data in result["commands"]:
             cmd_type = cmd_data["type"]
 
-            if cmd_type == "ADD":
-
+            if cmd_type == "ADD" or cmd_type == "SCHEDULE" or cmd_type == "CREATE":
+                cmd_data["type"] = "ADD" #here in case AI does not map other words to correct type
                 name = cmd_data["name"]
                 desc = cmd_data["description"]
 
@@ -485,8 +486,8 @@ class CommandInterpreter:
                 )
 
                 self.commands.append(Command(CommandType.ADD, event))
-            elif cmd_type == "DELETE":
-
+            elif cmd_type == "DELETE" or cmd_type == "REMOVE":
+                cmd_data["type"] = "DELETE"
                 name = cmd_data["name"]
                 desc = cmd_data["description"]
 
@@ -557,12 +558,18 @@ class CommandInterpreter:
             ##TODO: dont want to search based on a repeat, but can't be None
             # same for update, dont always want to update the repeat, but it can't be None
             # only searching based on name and date
-            elif cmd_type == "EDIT":
+            elif cmd_type == "EDIT" or cmd_type == "MOVE" or cmd_type == "UPDATE":
+                cmd_data["type"] = "EDIT"
                 # name of the event to edit
-
                 # using this for both old and new right (cant change name)
                 target_name = cmd_data["target"]["name"]
-                target_date = self.parse_date(cmd_data["target"]["date"]["start_date"])
+
+                #target event does not need a date to search
+                if cmd_data["target"]["date"]["start_date"]:
+                    target_date = self.parse_date(cmd_data["target"]["date"]["start_date"])
+                    target_daterange = DateRange(target_date,target_date)
+                else:
+                    target_daterange = None
 
                 # put all update info in updates
                 updates = cmd_data["updates"]
@@ -598,7 +605,7 @@ class CommandInterpreter:
                     name=target_name,
                     desc=None,
                     notifs=[],
-                    dates=DateRange(target_date, target_date),
+                    dates=target_daterange,
                     times=None,
                     # repeat needs to be none, dont want to search with it
                     repeat=Repeat(RepeatCycle("day", "m"), RepeatDuration("times", 0))
@@ -618,6 +625,10 @@ class CommandInterpreter:
                 print(search_event)
                 print(updated_event)
                 self.commands.append(Command(CommandType.EDIT, data=(search_event, updated_event)))
+
+            #TODO: ERROR FOR INVALID COMMAND
+            else:
+                pass
 
     # manually add command to queue
     # much faster (no AI model use)

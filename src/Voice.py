@@ -166,7 +166,7 @@ class Voice(Screen):
             command_label = Label(text='Command:', size_hint_y=None, height=30, halign='left')
             command_label.bind(size=lambda s, w: s.setter('text_size')(s, (s.width, None)))
             command_input = TextInput(
-                text=str(command.c_type),
+                text=str(command.c_type.name),
                 multiline=True,
                 size_hint_x=1,
                 size_hint_y=None,
@@ -258,7 +258,7 @@ class Voice(Screen):
             command_label = Label(text='Command:', size_hint_y=None, height=30, halign='left')
             command_label.bind(size=lambda s, w: s.setter('text_size')(s, (s.width, None)))
             command_input = TextInput(
-                text=str(command.c_type),
+                text=str(command.c_type.name),
                 multiline=True,
                 size_hint_x=1,
                 size_hint_y=None,
@@ -356,7 +356,7 @@ class Voice(Screen):
             command_label = Label(text='Command:', size_hint_y=None, height=30, halign='left')
             command_label.bind(size=lambda s, w: s.setter('text_size')(s, (s.width, None)))
             command_input = TextInput(
-                text=str(command.c_type),
+                text=str(command.c_type.name),
                 multiline=True,
                 size_hint_x=1,
                 size_hint_y=None,
