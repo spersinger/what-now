@@ -183,7 +183,8 @@ class DateRange:
     def __init__(self, d1:Date|str, d2:Date|str=None):
         if type(d1) == str:
             d1 = self._str_to_date(d1)
-        assert type(d1) == Date, "type checking"
+        assert type(d1) == Date or d1 == None, "type checking"
+
             
         if type(d2) == str:
             d2 = self._str_to_date(d2)

@@ -31,6 +31,8 @@ class Schedule():
             for g_idx, group in enumerate(self.events):
                 if group[0].name == search_term.name:
                     return (group[0], g_idx, None)
+            return None
+
         else:
             date = search_term.date_range.start_date # start date: search term
             

@@ -466,8 +466,8 @@ class WhatNow(App):
     def build(self):
         self.title = "What Now?"
         # create a shared instance of command interpreter
-        self.command_interpreter = CommandInterpreter()
-        self.schedule = Schedule()
+        #self.command_interpreter = command_interpreter
+        #self.schedule = user_schedule
 
         return Root()
 

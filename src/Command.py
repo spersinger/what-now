@@ -121,7 +121,8 @@ class CommandInterpreter:
             - ADD: words like, "add", "create", "schedule", "make"
             - DELETE: words like, "delete", "remove", "cancel"
             - EDIT: words like, "move", "reschedule", "change", "update", "edit"
-            - SEARCH: find, show, what, list
+        - ADD/DELETE commands:
+            - if exactly one date is included it MUST be used for start date
         - EDIT commands:
             - The event name is the target
             - target.date = null unless an old date is explicitly mentioned
@@ -133,26 +134,30 @@ class CommandInterpreter:
             - If a new time is provided, set updates.start_time and/or updates.end_time accordingly
             - Do not apply default times like you do for ADD commands
         - For all commands, include all fields; set missing fields to null
+        - Extract name - it may be more than 1 word
         - Extract a description if there is one
         - Extract date (natural language allowed, e.g., "tomorrow", "monday", "dec 8")
             - If the user specifies a day of the week (e.g., "monday", "tuesday"), or "tomorrow", return the day name as-is instead of a numeric date.
             -for all dates, if year is missing assume 2026
             -if end_date is missing, make it the same as start_date
-        -If there is only one time, make end_time 1 hour after start_time
-            - for repeat:
-                - repeat pattern (e.g., "every day", "every week", "every month" "every year") or null
-                - repeat duration:
-                    - "forever"
-                    - "X times" (e.g., "5 times")
-                    - "until DATE" (e.g., "until dec 10")
+        -If there is only one time:
+            - it MUST be use for start_time
+            - make end_time 1 hour after start_time
+        - Extract notifications (e.g., "10 minutes before") as a list
+        - for repeat:
+            - repeat pattern (e.g., "every day", "every week", "every month" "every year") or null
+            - repeat duration:
+                - "forever"
+                - "X times" (e.g., "5 times")
+                - "until DATE" (e.g., "until dec 10")
 
         OUTPUT FORMAT:
         - JSON object with a top-level key "commands", which is a list
-        - ADD/DELETE/SEARCH example:
+        - ADD/DELETE example:
         {{
           "commands": [
             {{
-              "type": "ADD|DELETE|SEARCH",
+              "type": "ADD|DELETE",
               "name": "event name",
               "description": null,
               "notifications": [],
@@ -160,7 +165,7 @@ class CommandInterpreter:
                 "start_date": null,
                 "end_date": null
             }},
-              "start_time": "time",
+              "start_time": null,
               "end_time": null,
               "repeat": {{
                 "pattern": null,
@@ -209,7 +214,7 @@ class CommandInterpreter:
                 "content": prompt
             }],
             temperature=0.1,
-            max_tokens=1500,
+            max_tokens=2000,
             response_format={"type": "json_object"}
         )
 
@@ -222,7 +227,7 @@ class CommandInterpreter:
             return {"error": "Failed to parse JSON"}
 
     # manual parsing for date
-    def parse_date(self, date_str: str) -> Date:
+    def parse_date(self, date_str: str, c_type) -> Date:
         if date_str:
             date_str = date_str.lower()
 
@@ -243,8 +248,11 @@ class CommandInterpreter:
             "july", "august", "september", "october", "november", "december"
         ]
 
-        # default
-        event_date = Date.today()
+        # default, dont default date for delete
+        if c_type == "DELETE":
+            event_date = None
+        else:
+            event_date = Date.today()
 
         if date_str is None:
             return event_date
@@ -462,8 +470,10 @@ class CommandInterpreter:
                 desc = cmd_data["description"]
 
                 # date
-                start_date = self.parse_date(cmd_data["date"]["start_date"])
-                end_date = self.parse_date(cmd_data["date"]["end_date"])
+                start_date = self.parse_date(cmd_data["date"]["start_date"], cmd_type)
+                end_date = self.parse_date(cmd_data["date"]["end_date"],cmd_type)
+
+
                 # time
                 time_range = self.parse_time(
                     cmd_data["start_time"],
@@ -492,8 +502,14 @@ class CommandInterpreter:
                 desc = cmd_data["description"]
 
                 # date
-                start_date = self.parse_date(cmd_data["date"]["start_date"])
-                end_date = self.parse_date(cmd_data["date"]["end_date"])
+                start_date = self.parse_date(cmd_data["date"]["start_date"],cmd_type)
+                end_date = self.parse_date(cmd_data["date"]["end_date"],cmd_type)
+
+                if start_date or end_date:
+                    delete_date = DateRange(start_date,end_date)
+                else:
+                    delete_date = None
+
                 # time
                 time_range = self.parse_time(
                     cmd_data["start_time"],
@@ -503,61 +519,24 @@ class CommandInterpreter:
                 # notifications
                 notifs = self.parse_notifications(cmd_data["notifications"])
 
-                # repeat
-                repeat = self.parse_repeat(cmd_data["repeat"], start_date, end_date)
+                # repeat doesnt matter, just need a value
+                repeat = Repeat(RepeatCycle("day", "m"), RepeatDuration("times", 0))
 
-                # for delete we should only need a name and date?
-                # maybe time?
-                # so what should we set description, notifs, repeat to?
-
+                # for delete we only need a name and optional date.
+                #but we must have values for the others
                 event = CalendarEvent(
                     name=name,
                     desc=desc,
                     notifs=notifs,
-                    dates=DateRange(start_date, end_date),
+                    dates=delete_date,
                     times=time_range,
                     repeat=repeat  # should change this to None, but it is not accepted by repeat
                 )
 
                 self.commands.append(Command(CommandType.DELETE, event))
-            elif cmd_type == "SEARCH":
 
-                name = cmd_data["name"]
-                desc = cmd_data["description"]
 
-                # date
-                start_date = self.parse_date(cmd_data["date"]["start_date"])
-                end_date = self.parse_date(cmd_data["date"]["end_date"])
-                # time
-                time_range = self.parse_time(
-                    cmd_data["start_time"],
-                    cmd_data["end_time"]
-                )
-
-                # notifications
-                notifs = self.parse_notifications(cmd_data["notifications"])
-
-                # repeat
-                repeat = self.parse_repeat(cmd_data["repeat"], start_date, end_date)
-
-                # for search we should only need a name and date?
-                # maybe time?
-                # so what should we set description, notifs, repeat to?
-
-                event = CalendarEvent(
-                    name=name,
-                    desc=desc,
-                    notifs=notifs,
-                    dates=DateRange(start_date, end_date),
-                    times=time_range,
-                    repeat=repeat  # should change this to None, but it is not accepted by repeat
-                )
-
-                self.commands.append(Command(CommandType.SEARCH, event))
-
-            ##TODO: dont want to search based on a repeat, but can't be None
-            # same for update, dont always want to update the repeat, but it can't be None
-            # only searching based on name and date
+            # don't always want to update the repeat, but it can't be None
             elif cmd_type == "EDIT" or cmd_type == "MOVE" or cmd_type == "UPDATE":
                 cmd_data["type"] = "EDIT"
                 # name of the event to edit
@@ -566,7 +545,7 @@ class CommandInterpreter:
 
                 #target event does not need a date to search
                 if cmd_data["target"]["date"]:
-                    target_date = self.parse_date(cmd_data["target"]["date"]["start_date"])
+                    target_date = self.parse_date(cmd_data["target"]["date"]["start_date"], cmd_type)
                     target_daterange = DateRange(target_date,target_date)
                 else:
                     #make this : target_daterange = Daterange(None,None)?
@@ -596,9 +575,16 @@ class CommandInterpreter:
 
                 update_dates = cmd_data["updates"].get("date")
 
+                update_repeat = cmd_data["updates"].get("repeat")
+
                 if update_dates:
-                    update_sd = self.parse_date(update_dates.get("start_date"))
-                    update_ed = self.parse_date(update_dates.get("end_date"))
+                    update_sd = self.parse_date(update_dates.get("start_date"), cmd_type)
+                    update_ed = self.parse_date(update_dates.get("end_date"),cmd_type)
+                    if update_repeat:
+                        repeat = self.parse_repeat(update_repeat, update_sd, update_ed)
+                    else:
+                        # TODO: WOULD LIKE THIS TO BE NONE
+                        repeat = Repeat(RepeatCycle("day", "m"), RepeatDuration("times", 0))
                 else:
                     update_sd = None
                     update_ed = None
@@ -610,7 +596,7 @@ class CommandInterpreter:
                     notifs=[],
                     dates=target_daterange,
                     times=None,
-                    # repeat needs to be none, dont want to search with it
+                    # repeat doesnt matter for the search
                     repeat=Repeat(RepeatCycle("day", "m"), RepeatDuration("times", 0))
                 )
 
@@ -622,7 +608,7 @@ class CommandInterpreter:
                     dates=DateRange(update_sd, update_ed),
                     times=update_time,
                     # repeat needs to accept None in case it doesn't need to be changed
-                    repeat=Repeat(RepeatCycle("day", "m"), RepeatDuration("times", 0))
+                    repeat=repeat
                 )
                 # prints are just here to test the data, looking pretty good
                 print(search_event)
