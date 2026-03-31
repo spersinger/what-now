@@ -7,6 +7,65 @@
     color: (0.4, 0.4, 0.4, 1) if self.state == "down" else (1, 1, 1, 1)
     font_size: "16sp"
 
+<ThemedSpinner>:
+    background_normal: ""
+    background_down: ""
+    background_color: 0, 0, 0, 0
+    color: 0, 0, 0, 1
+    canvas.before:
+        Color:
+            rgba: (0.302, 0.659, 0.910, 1) if self.state == 'down' else (0.9, 0.9, 0.9, 1)
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [5]
+
+    canvas.after:
+        Color:
+            rgba: (0.302, 0.659, 0.910, 1)
+        Triangle:
+            points:
+                [ self.right - 20, self.y + self.height * 0.55, self.right - 8,  self.y + self.height * 0.55, self.right - 14, self.y + self.height * 0.35 ]
+
+<ThemedCheckBox>:
+    background_checkbox_normal: ''
+    background_checkbox_down: ''
+    background_radio_normal: ''
+    background_radio_down: ''
+    color: 0, 0, 0, 0
+    canvas.before:
+        # Outer white rounded rectangle
+        Color:
+            rgba: (1, 1, 1, 1)
+        RoundedRectangle:
+            pos: self.center_x - self.height / 2, self.center_y - self.height / 2
+            size: self.height, self.height
+            radius: [6]
+        # Blue inner rounded rectangle (only when checked)
+        Color:
+            rgba: (0.302, 0.659, 0.910, 1) if self.active else (0, 0, 0, 0)
+        RoundedRectangle:
+            pos: self.center_x - self.height / 2, self.center_y - self.height / 2
+            size: self.height, self.height
+            radius: [6]
+
+<ThemedSpinnerOption>:
+    background_normal: ""
+    background_down: ""
+    background_color: 0, 0, 0, 0
+    color: 0, 0, 0, 1
+    canvas.before:
+        Color:
+            rgba: (0.302, 0.659, 0.910, 1) if self.state == 'down' else (0.9, 0.9, 0.9, 1)
+        Rectangle:
+            pos: self.pos
+            size: self.size
+        Color:
+            rgba: (0.8, 0.8, 0.8, 1)
+        Line:
+            points: self.x, self.y, self.right, self.y
+            width: 2
+
 <ThemedBox>:
     background_normal: ""
     background_active: ""
@@ -42,6 +101,20 @@
     padding: dp(12), dp(10)
     multiline: True
     line_height: 1
+
+<ThemedToggleButton>:
+    markup: True
+    background_normal: ""
+    background_down: ""
+    background_color: 0, 0, 0, 0
+    disabled_color: 0.33, 0.33, 0.33, 1
+    canvas.before:
+        Color:
+            rgba: (0.302, 0.659, 0.910, 1) if self.state == 'down' else (0.9, 0.9, 0.9, 1)
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [5]
 
 <PrimaryButton>:
     markup: True
@@ -96,8 +169,6 @@
     height: self.minimum_height
     spacing: 2
     padding: 2
-
-    # Day number — swap for CalendarDayToday when it's today
     Label:
         text: root.day_text
         font_size: "12sp"
@@ -105,19 +176,12 @@
         size_hint_y: None
         height: 24
         color: root.day_color
-
-    # Event bars — add/remove in Python based on event count
-    Widget:
-        id: bar1
+    BoxLayout:
+        id: event_bars
+        orientation: "vertical"
         size_hint_y: None
-        height: 4
-        canvas:
-            Color:
-                rgba: 0.878, 0.878, 0.878, 1
-            RoundedRectangle:
-                pos: self.pos
-                size: self.size
-                radius: [2]
+        height: self.minimum_height
+        spacing: 4
 
 <CalendarDayToday>:
     orientation: "vertical"
@@ -140,6 +204,12 @@
             Ellipse:
                 pos: self.x + self.width/2 - 12, self.y
                 size: 24, 24
+    BoxLayout:
+        id: event_bars
+        orientation: "vertical"
+        size_hint_y: None
+        height: self.minimum_height
+        spacing: 4
 
 <EventItem>:
     orientation: "vertical"
@@ -164,6 +234,14 @@
         size_hint_y: None
         height: self.texture_size[1]
         text_size: self.width, None
+    Label:
+        text: root.event_date
+        halign: "left"
+        font_size: "11sp"
+        color: 0.541, 0.541, 0.541, 1
+        size_hint_y: None
+        height: self.texture_size[1]
+        text_size: self.width, None
 
     Label:
         text: root.event_time
@@ -173,3 +251,57 @@
         size_hint_y: None
         height: self.texture_size[1]
         text_size: self.width, None
+
+<EditEventItem>:
+    orientation: "horizontal"
+    padding: [4, 6]
+    spacing: 2
+    size_hint_y: None
+    height: self.minimum_height
+
+    BoxLayout:
+        id: event_details 
+        orientation: "vertical"
+        size_hint_y: None
+        height: self.minimum_height
+        spacing: 4
+
+        Label:
+            text: "[b]" + root.event_type + "[/b]"
+            markup: True
+            halign: "left"
+            font_size: "14sp"
+            size_hint_y: None
+            height: self.texture_size[1]
+            text_size: self.width, None
+
+        Label:
+            text: root.event_name
+            halign: "left"
+            font_size: "12sp"
+            size_hint_y: None
+            height: self.texture_size[1]
+            text_size: self.width, None
+        Label:
+            text: root.event_date
+            halign: "left"
+            font_size: "11sp"
+            color: 0.541, 0.541, 0.541, 1
+            size_hint_y: None
+            height: self.texture_size[1]
+            text_size: self.width, None
+
+        Label:
+            text: root.event_time
+            halign: "left"
+            font_size: "11sp"
+            color: 0.541, 0.541, 0.541, 1
+            size_hint_y: None
+            height: self.texture_size[1]
+            text_size: self.width, None
+
+    PrimaryButton:
+        size_hint_y: 0.75
+        size_hint_x: 0.15
+        text: "Edit"
+        on_release: root.edit_event()

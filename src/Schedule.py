@@ -3,6 +3,7 @@ from typing import List
 from Command import Command, Response, CommandType, StatusCode
 from copy import deepcopy
 from difflib import SequenceMatcher
+import calendar
 
 # contains all of a user's events
 # purpose: manage calendar events
@@ -10,24 +11,28 @@ class Schedule():
     events: List[List[CalendarEvent]] # repeating events grouped together
     
     def __init__(self):
+        # TODO: Pull events from iCal file
         self.events = []
         
-        
+    def __cleanup__(self): pass
+        # Save events to iCal file
         
     # returns the closest match;
     # search by name and optional date
     def search_events(self, search_term:CalendarEvent) -> Tuple[CalendarEvent, int, int]:
         name = search_term.name
-        date = search_term.date_range.start_date # start date: search term
         
         match: Tuple[CalendarEvent, int, int]
         
         # if no date, assume search is for whole group
         # TODO: necessary? figure out use case if so
         if search_term.date_range is None:
+            print("Date range null")
             for g_idx, group in enumerate(self.events):
                 if group[0].name == search_term.name:
                     return (group[0], g_idx, None)
+        else:
+            date = search_term.date_range.start_date # start date: search term
             
         # otherwise, find single event match
         for g_idx, group in enumerate(self.events):
@@ -46,7 +51,36 @@ class Schedule():
         # no match found
         return None
     
-    
+    def get_for_date(self, date: Date) -> List[CalendarEvent]:
+        result = []
+        for group in self.events:
+            for ev in group:
+                if ev.date_range.contains_date(date):
+                    result.append(ev)
+        return result
+
+    def get_event_counts(self, year, month) -> dict:
+        counts = {}
+        for group in self.events:
+            for ev in group:
+                for day in range(1, calendar.monthrange(year, month)[1] + 1):
+                    d = Date(year, month, day)
+                    if self._event_occurs_on(ev, d):
+                        counts[day] = counts.get(day, 0) + 1
+        return counts
+
+    def _event_occurs_on(self, ev: CalendarEvent, d: Date) -> bool:
+        return ev.date_range.contains_date(d)
+
+    def get_days_with_events(self, year: int, month: int) -> Set[int]:
+        days = set()
+        for group in self.events:
+            for ev in group:  # <-- iterate into the group
+                for day in range(1, calendar.monthrange(year, month)[1] + 1):
+                    d = Date(year, month, day)
+                    if self._event_occurs_on(ev, d):
+                        days.add(day)
+        return days
     
     def add_event(self, event:CalendarEvent):
 
@@ -59,6 +93,8 @@ class Schedule():
         while True:
             group.append(deepcopy(event))
             num_repeats += 1
+            if event.repeat == None:
+                break
             event.date_range = event.get_next_occurrence_dates()
             if event.date_range == None:
                 break
