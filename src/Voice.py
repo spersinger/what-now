@@ -108,15 +108,18 @@ class Voice(Screen):
             self.listen_thread = None
             print("listen thread exited")
 
-    # submit buttons function -- will eventually send text to command interpreter
+    # submit buttons function - send text to command interpreter and perform commands
     def submit_voice(self):
         text = self.ids.voice_text_input.text
         if text != "":
 
             app = App.get_running_app()
 
-            #send text to command interpreter
-            app.command_interpreter.generate_commands(text)
+            parts = text.split(" and ")
+
+            for part in parts:
+                #send text to command interpreter
+                app.command_interpreter.generate_commands(part)
 
             #have schedule perform the commands
             #send each command to perform_commands
@@ -126,11 +129,6 @@ class Voice(Screen):
             self.current_command_index=0
             self.show_next_command(app)
 
-            #for c in cmd_list:
-             #   print("RUNNING:", c.c_type)
-              #  print(c.data)
-
-               # app.schedule.perform_command(c)
 
             # clear commands list after they are performed
             app.command_interpreter.commands = []
