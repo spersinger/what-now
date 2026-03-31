@@ -565,10 +565,13 @@ class CommandInterpreter:
                 target_name = cmd_data["target"]["name"]
 
                 #target event does not need a date to search
-                if cmd_data["target"]["date"]["start_date"]:
+                if cmd_data["target"]["date"]:
                     target_date = self.parse_date(cmd_data["target"]["date"]["start_date"])
                     target_daterange = DateRange(target_date,target_date)
                 else:
+                    #make this : target_daterange = Daterange(None,None)?
+                    # to allow no date to be searched, but start_date cant be none
+                    # in a DateRange
                     target_daterange = None
 
                 # put all update info in updates
