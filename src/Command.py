@@ -108,6 +108,7 @@ class CommandInterpreter:
 
         )
 
+    # words like, "add", "create", "schedule", "make"
     # AI model for parsing commands
     def parse_command(self, text: str) -> dict:
         prompt = f"""You are a JSON extraction assistant. Parse the following user input into structured commands.
@@ -117,12 +118,14 @@ class CommandInterpreter:
 
         RULES:
         - Command types:
-            - IMPORTANT: the "words like" must always be mapped to the actual command type
-            - ADD: words like, "add", "create", "schedule", "make"
-            - DELETE: words like, "delete", "remove", "cancel"
-            - EDIT: words like, "move", "reschedule", "change", "update", "edit"
+            - ADD:
+            - DELETE:
+            - EDIT:
         - ADD/DELETE commands:
-            - if exactly one date is included it MUST be used for start date
+            - if exactly one date is included it MUST be used for start_date
+            -If there is only one time (e.g., "10 am"):
+                -it MUST be used for start_time
+                -make end_time 1 hour after start_time
         - EDIT commands:
             - The event name is the target
             - target.date = null unless an old date is explicitly mentioned
@@ -135,14 +138,11 @@ class CommandInterpreter:
             - Do not apply default times like you do for ADD commands
         - For all commands, include all fields; set missing fields to null
         - Extract name - it may be more than 1 word
-        - Extract a description if there is one
+        - Extract a description if present
         - Extract date (natural language allowed, e.g., "tomorrow", "monday", "dec 8")
             - If the user specifies a day of the week (e.g., "monday", "tuesday"), or "tomorrow", return the day name as-is instead of a numeric date.
             -for all dates, if year is missing assume 2026
             -if end_date is missing, make it the same as start_date
-        -If there is only one time:
-            - it MUST be use for start_time
-            - make end_time 1 hour after start_time
         - Extract notifications (e.g., "10 minutes before") as a list
         - for repeat:
             - repeat pattern (e.g., "every day", "every week", "every month" "every year") or null
@@ -294,19 +294,31 @@ class CommandInterpreter:
         event_end = Time(13, 0)
 
         if start_str:
-            time_match = re.search(r'(\d{1,2}(:\d{2})?\s*(am|pm))', start_str, flags=re.IGNORECASE)
+            time_match = re.search(r'(\d{1,2}:\d{2}(:\d{2})?|\d{1,2}\s*(am|pm))', start_str, flags=re.IGNORECASE)
 
             if time_match:
-                time_str = time_match.group(0).strip()
+                time_str = time_match.group(0).strip().lower()
 
-                # split into hours, minutes, meridiem
+                # split into hours, minutes, seconds, meridiem
+
                 if ":" in time_str:
-                    hour_str, rest = time_str.split(":")
-                    if " " in rest:
-                        minute_str, meridiem = rest.split()
+                    parts = time_str.split(":")  # split on colon
+                    hour_str = parts[0]
+                    minute_str = parts[1] if len(parts) > 1 else "0"
+                    seconds_str = parts[2] if len(parts) > 2 else "0"
+
+
+                    # check if seconds_str has AM/PM
+                    if " " in seconds_str:
+                        sec_part, meridiem = seconds_str.split()
+                        seconds_str = sec_part
                     else:
-                        minute_str = rest
                         meridiem = ""
+
+                    # if there's a space in the minute part, that's the AM/PM
+                    if " " in minute_str:
+                        minute_str, meridiem = minute_str.split()
+
                 else:
                     # e.g., "8 am"
                     parts = time_str.split()
@@ -327,17 +339,27 @@ class CommandInterpreter:
 
                 # handle end time
                 if end_str:
-                    end_match = re.search(r'(\d{1,2}(:\d{2})?\s*(am|pm))', end_str, flags=re.IGNORECASE)
+                    ''''''
+                    end_match = re.search(r'(\d{1,2}:\d{2}(:\d{2})?|\d{1,2}\s*(am|pm))', end_str, flags=re.IGNORECASE)
                     if end_match:
-                        end_time_str = end_match.group(0).strip()
+                        end_time_str = end_match.group(0).strip().lower()
 
                         if ":" in end_time_str:
-                            h_str, rest = end_time_str.split(":")
-                            if " " in rest:
-                                m_str, mer = rest.split()
+                            parts = end_time_str.split(":")  # split on colon
+                            h_str = parts[0]
+                            m_str = parts[1] if len(parts) > 1 else "0"
+                            s_str = parts[2] if len(parts) > 2 else "0"
+
+                            # check if seconds_str has AM/PM
+                            if " " in s_str:
+                                sec_part, mer = s_str.split()
+                                s_str = sec_part
                             else:
-                                m_str = rest
                                 mer = ""
+
+                            # if there's a space in the minute part, that's the AM/PM
+                            if " " in m_str:
+                                m_str, mer = minute_str.split()
                         else:
                             parts = end_time_str.split()
                             h_str = parts[0]
@@ -464,7 +486,7 @@ class CommandInterpreter:
         for cmd_data in result["commands"]:
             cmd_type = cmd_data["type"]
 
-            if cmd_type == "ADD" or cmd_type == "SCHEDULE" or cmd_type == "CREATE":
+            if cmd_type == "ADD" or cmd_type == "SCHEDULE" or cmd_type == "CREATE" or cmd_type == "MAKE":
                 cmd_data["type"] = "ADD" #here in case AI does not map other words to correct type
                 name = cmd_data["name"]
                 desc = cmd_data["description"]
@@ -496,7 +518,7 @@ class CommandInterpreter:
                 )
 
                 self.commands.append(Command(CommandType.ADD, event))
-            elif cmd_type == "DELETE" or cmd_type == "REMOVE":
+            elif cmd_type == "DELETE" or cmd_type == "REMOVE" or cmd_type == "CANCEL":
                 cmd_data["type"] = "DELETE"
                 name = cmd_data["name"]
                 desc = cmd_data["description"]
@@ -537,7 +559,7 @@ class CommandInterpreter:
 
 
             # don't always want to update the repeat, but it can't be None
-            elif cmd_type == "EDIT" or cmd_type == "MOVE" or cmd_type == "UPDATE":
+            elif cmd_type == "EDIT" or cmd_type == "MOVE" or cmd_type == "UPDATE" or cmd_type == "RESCHEDULE":
                 cmd_data["type"] = "EDIT"
                 # name of the event to edit
                 # using this for both old and new right (cant change name)

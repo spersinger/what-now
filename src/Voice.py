@@ -10,9 +10,11 @@ from kivy.uix.screenmanager import ScreenManager, Screen
 import speech_recognition as sr
 import threading
 from kivy.clock import Clock
+import re
 
 from Command import CommandType
 from globals import user_schedule, command_interpreter
+import CalendarEvent
 
 
 class Voice(Screen):
@@ -156,10 +158,12 @@ class Voice(Screen):
                 app = App.get_running_app()
                 app.voice_input = ""
 
-    #TODO: put text input into the data in case the user changes it
+
     def build_accept_command_ui_popup(self, command):
         content = BoxLayout(orientation='vertical', padding=10, spacing=10, size_hint = (1,1))
         button_box = BoxLayout(orientation='horizontal', padding=10, spacing=10)
+        #inputs for changed TextInput to be placed in data
+        inputs = {}
 
         if command.c_type == CommandType.ADD:
 
@@ -172,6 +176,7 @@ class Voice(Screen):
                 size_hint_y=None,
                 height=35
             )
+            inputs["type"] = command_input
 
             name_label = Label(text='Name:', size_hint_y=None, height=30, halign='left')
             name_label.bind(size=lambda s, w: s.setter('text_size')(s, (s.width, None)))
@@ -182,6 +187,7 @@ class Voice(Screen):
                 size_hint_y=None,
                 height=35
             )
+            inputs["name"] = name_text_input
 
             desc_label = Label(text='Desc:', size_hint_y=None, height=30, halign='left')
             desc_label.bind(size=lambda s, w: s.setter('text_size')(s, (s.width, None)))
@@ -192,6 +198,7 @@ class Voice(Screen):
                 size_hint_y=None,
                 height=35
             )
+            inputs["desc"] = desc_input
 
             if command.data.notif_times:
                 notifs = ", ".join(str(n) for n in command.data.notif_times)
@@ -206,7 +213,7 @@ class Voice(Screen):
                 size_hint_y=None,
                 height=35
             )
-
+            inputs["notif"] = notif_input
 
             date_label = Label(text='Date range:', size_hint_y=None, height=30, halign='left')
             date_label.bind(size=lambda s, w: s.setter('text_size')(s, (s.width, None)))
@@ -217,7 +224,7 @@ class Voice(Screen):
                 size_hint_y=None,
                 height=35
             )
-
+            inputs["date"] = date_input
 
             time_label = Label(text='Time:', size_hint_y=None, height=30, halign='left')
             time_label.bind(size=lambda s, w: s.setter('text_size')(s, (s.width, None)))
@@ -228,7 +235,7 @@ class Voice(Screen):
                 size_hint_y=None,
                 height=35
             )
-
+            inputs["time"] = time_input
 
             repeat_label = Label(text='Date range:', size_hint_y=None, height=30, halign='left')
             repeat_label.bind(size=lambda s, w: s.setter('text_size')(s, (s.width, None)))
@@ -239,7 +246,7 @@ class Voice(Screen):
                 size_hint_y=None,
                 height=35
             )
-
+            inputs["repeat"] = repeat_input
 
             content.add_widget(command_label)
             content.add_widget(command_input)
@@ -272,6 +279,7 @@ class Voice(Screen):
                 size_hint_y=None,
                 height=35
             )
+            inputs["type"] = command_input
 
             name_label = Label(text='Name:', size_hint_y=None, height=30, halign='left')
             name_label.bind(size=lambda s, w: s.setter('text_size')(s, (s.width, None)))
@@ -282,7 +290,7 @@ class Voice(Screen):
                 size_hint_y=None,
                 height=35
             )
-
+            inputs["name"] = name_text_input
 
             # add command and name labels and input
             content.add_widget(command_label)
@@ -303,6 +311,7 @@ class Voice(Screen):
                 )
                 content.add_widget(date_label)
                 content.add_widget(date_input)
+                inputs["date"] = date_input
 
 
         elif command.c_type == CommandType.EDIT:
@@ -318,6 +327,7 @@ class Voice(Screen):
                 size_hint_y=None,
                 height=35
             )
+            inputs["type"] = command_input
 
             name_label = Label(text='Name:', size_hint_y=None, height=30, halign='left')
             name_label.bind(size=lambda s, w: s.setter('text_size')(s, (s.width, None)))
@@ -328,6 +338,7 @@ class Voice(Screen):
                 size_hint_y=None,
                 height=35
             )
+            inputs["name"] = name_text_input
 
             #add command and name labels and input
             content.add_widget(command_label)
@@ -349,6 +360,7 @@ class Voice(Screen):
                 )
                 content.add_widget(desc_label)
                 content.add_widget(desc_input)
+                inputs["desc"] = desc_input
 
 
             if new_event.notif_times:
@@ -365,6 +377,7 @@ class Voice(Screen):
 
                 content.add_widget(notif_label)
                 content.add_widget(notif_input)
+                inputs["notif"] = notif_input
 
 
             if new_event.date_range:
@@ -380,6 +393,7 @@ class Voice(Screen):
                 )
                 content.add_widget(date_label)
                 content.add_widget(date_input)
+                inputs["date"] = date_input
 
 
             if new_event.time_range:
@@ -395,7 +409,7 @@ class Voice(Screen):
                 )
                 content.add_widget(time_label)
                 content.add_widget(time_input)
-
+                inputs["time"] = time_input
 
             if new_event.repeat:
 
@@ -411,13 +425,13 @@ class Voice(Screen):
 
                 content.add_widget(repeat_label)
                 content.add_widget(repeat_input)
-
+                inputs["repeat"] = repeat_input
 
         accept_btn = Button(text='Accept', size_hint=(1,0.1))
-        accept_btn.bind(on_press=lambda x: self.on_accept_command(command))
+        accept_btn.bind(on_press=lambda x: self.on_accept_command(command, inputs))
 
         accept_all_btn = Button(text='Accept all', size_hint=(1,0.1))
-        accept_all_btn.bind(on_press=lambda x: self.on_accept_all_commands())
+        accept_all_btn.bind(on_press=lambda x: self.on_accept_all_commands(command,inputs))
 
         button_box.add_widget(accept_btn)
         button_box.add_widget(accept_all_btn)
@@ -444,16 +458,125 @@ class Voice(Screen):
             command_interpreter.commands = []
             Clock.schedule_once(self._cleanup)
 
-    def on_accept_command(self,command):
+    def on_accept_command(self,command, inputs):
         self.accept_command_popup.dismiss()
+
+        #convert string to CommandType
+        if "type" in inputs:
+            text = inputs["type"].text.strip().upper()
+            command.c_type = CommandType[text]
+
+        if "name" in inputs:
+            command.data.name = inputs["name"].text
+
+        if "desc" in inputs:
+            command.data.description = inputs["desc"].text
+
+        if "notif" in inputs:
+            text = inputs["notif"].text
+            #split the string into a list
+            notif_list = [n.strip() for n in text.split(",") if n.strip()]
+            # parse notification list
+            command.data.notif_times = command_interpreter.parse_notifications(notif_list)
+
+        if "date" in inputs:
+            text = inputs["date"].text
+            if "->" in text:
+                start_str, end_str = text.split("->")
+                start_str = start_str.strip()
+                end_str = end_str.strip()
+            else:
+                # single date
+                start_str = end_str = text.strip()
+
+            # create date range and put it in data
+            start_date = command_interpreter.parse_date(start_str, command.c_type)
+            end_date = command_interpreter.parse_date(end_str, command.c_type)
+            command.data.date_range = CalendarEvent.DateRange(start_date,end_date)
+
+
+        if "time" in inputs:
+            text = inputs["time"].text
+            parts = [p.strip() for p in re.split(r'\s*->\s*', text)]
+
+            if len(parts) == 2:
+                start_t, end_t = parts
+            else:
+                start_t = parts[0]
+                end_t = None
+
+            # create time range and put it in data
+            command.data.time_range = command_interpreter.parse_time(start_t,end_t)
+
+        if "repeat" in inputs:
+            text = inputs["repeat"].text
+
+            repeat_dict = self.text_to_repeat_dict(text)
+
+            command.data.repeat = command_interpreter.parse_repeat(repeat_dict,command.data.date_range.start_date,command.data.date_range.end_date)
 
         user_schedule.perform_command(command)
 
         self.current_command_index += 1
         self.show_next_command()  # Show the next command
 
-    def on_accept_all_commands(self):
+    def on_accept_all_commands(self, command,inputs):
         self.accept_command_popup.dismiss()
+
+        # put new input into only the first command to be performed
+        # convert string to CommandType
+        if "type" in inputs:
+            text = inputs["type"].text.strip().upper()
+            command.c_type = CommandType[text]
+
+        if "name" in inputs:
+            command.data.name = inputs["name"].text
+
+        if "desc" in inputs:
+            command.data.description = inputs["desc"].text
+
+        if "notif" in inputs:
+            text = inputs["notif"].text
+            # split the string into a list
+            notif_list = [n.strip() for n in text.split(",") if n.strip()]
+            # parse notification list
+            command.data.notif_times = command_interpreter.parse_notifications(notif_list)
+
+        if "date" in inputs:
+            text = inputs["date"].text
+            if "->" in text:
+                start_str, end_str = text.split("->")
+                start_str = start_str.strip()
+                end_str = end_str.strip()
+            else:
+                # single date
+                start_str = end_str = text.strip()
+
+            # create date range and put it in data
+            start_date = command_interpreter.parse_date(start_str, command.c_type)
+            end_date = command_interpreter.parse_date(end_str, command.c_type)
+            command.data.date_range = CalendarEvent.DateRange(start_date, end_date)
+
+        if "time" in inputs:
+            text = inputs["time"].text
+            parts = [p.strip() for p in re.split(r'\s*->\s*', text)]
+
+            if len(parts) == 2:
+                start_t, end_t = parts
+            else:
+                start_t = parts[0]
+                end_t = None
+
+            # create time range and put it in data
+            command.data.time_range = command_interpreter.parse_time(start_t, end_t)
+
+        if "repeat" in inputs:
+            text = inputs["repeat"].text
+
+            repeat_dict = self.text_to_repeat_dict(text)
+
+            command.data.repeat = command_interpreter.parse_repeat(repeat_dict, command.data.date_range.start_date,
+                                                                   command.data.date_range.end_date)
 
         while self.current_command_index < len(self.commands_to_process):
             command = self.commands_to_process[self.current_command_index]
@@ -465,3 +588,35 @@ class Voice(Screen):
     def _cleanup(self, _):
         self.commands_to_process = []
         self.current_command_index = 0
+
+    # function converts text from TextInput into a dictionary
+    # so it can be sent to command_interpreter.parse_repeat
+    def text_to_repeat_dict(self, text: str):
+        if not text:
+            return None
+
+        text = text.lower().strip()
+
+        pattern = None
+        duration = None
+
+        pattern_match = re.search(r"every (day|week|month|year)", text)
+        if pattern_match:
+            pattern = f"every {pattern_match.group(1)}"
+
+
+        if "forever" in text:
+            duration = "forever"
+
+        elif re.search(r"\d+\s*times", text):
+            duration = re.search(r"\d+\s*times", text).group(0)
+
+        elif "until" in text:
+            match = re.search(r"until (.+)", text)
+            if match:
+                duration = f"until {match.group(1).strip()}"
+
+        return {
+            "pattern": pattern,
+            "duration": duration
+        }
