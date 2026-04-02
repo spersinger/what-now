@@ -1,0 +1,75 @@
+diff -u a/configure b/configure
+--- a/configure
++++ b/configure
+@@ -15971,13 +15971,13 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+         ;;
+ 
+   irix* )
+-                                { $as_echo "$as_me:${as_lineno-$LINENO}: checking for pthread_create in -lpthread" >&5
+-$as_echo_n "checking for pthread_create in -lpthread... " >&6; }
++                                { $as_echo "$as_me:${as_lineno-$LINENO}: checking for pthread_create in -pthread" >&5
++$as_echo_n "checking for pthread_create in -pthread... " >&6; }
+ if ${ac_cv_lib_pthread_pthread_create+:} false; then :
+   $as_echo_n "(cached) " >&6
+ else
+   ac_check_lib_save_LIBS=$LIBS
+-LIBS="-lpthread  $LIBS"
++LIBS="-pthread  $LIBS"
+ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+ /* end confdefs.h.  */
+ 
+@@ -16012,7 +16012,7 @@ if test "x$ac_cv_lib_pthread_pthread_create" = xyes; then :
+ #define HAVE_LIBPTHREAD 1
+ _ACEOF
+ 
+-  LIBS="-lpthread $LIBS"
++  LIBS="-pthread $LIBS"
+ 
+ else
+   as_fn_error $? "IRIX posix thread library not found!" "$LINENO" 5
+@@ -16122,7 +16122,7 @@ fi
+ 
+         OTHER_OBJS="pa_sgi/pa_sgi.o src/os/unix/pa_unix_hostapis.o src/os/unix/pa_unix_util.o"
+ 
+-                        LIBS="-lm -ldmedia -laudio -lpthread"
++                        LIBS="-lm -ldmedia -laudio -pthread"
+         PADLL="libportaudio.so"
+         SHARED_FLAGS=""
+         ;;
+@@ -16131,13 +16131,13 @@ fi
+ 
+         CFLAGS="$CFLAGS -I\$(top_srcdir)/src/os/unix"
+ 
+-        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for pthread_create in -lpthread" >&5
+-$as_echo_n "checking for pthread_create in -lpthread... " >&6; }
++        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for pthread_create in -pthread" >&5
++$as_echo_n "checking for pthread_create in -pthread... " >&6; }
+ if ${ac_cv_lib_pthread_pthread_create+:} false; then :
+   $as_echo_n "(cached) " >&6
+ else
+   ac_check_lib_save_LIBS=$LIBS
+-LIBS="-lpthread  $LIBS"
++LIBS="-pthread  $LIBS"
+ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+ /* end confdefs.h.  */
+ 
+@@ -16210,8 +16210,8 @@ fi
+ 
+         fi
+ 
+-        DLL_LIBS="$DLL_LIBS -lm -lpthread"
+-        LIBS="$LIBS -lm -lpthread"
++        DLL_LIBS="$DLL_LIBS -lm -pthread"
++        LIBS="$LIBS -lm -pthread"
+         PADLL="libportaudio.so"
+ 
+         ## support sun cc compiler flags
+@@ -16222,7 +16222,7 @@ fi
+               ;;
+            *)
+               SHARED_FLAGS="-fPIC"
+-              THREAD_CFLAGS="-lpthread"
++              THREAD_CFLAGS="-pthread"
+               ;;
+         esac
+ 
