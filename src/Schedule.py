@@ -132,7 +132,15 @@ class Schedule():
                     delay
                 )
 
-        now = datetime.datetime.now()
+        # Schedule notifs days in advance
+        for event_group in self.events:
+            for event in event_group:
+                if event.notif_times is not None:
+                    for notif in event.notif_times:
+                         if notif.timespan_type is TimeType.DAY:
+                            _schedule_notif(self, event, event.notif_times.num_timespans * 86400, f"{notif.num_timespans} day(s)")
+
+        # otherwise just schedule for current day
         events_today = self.get_for_date(datetime.date.today())
         for event in events_today:
             if event.notif_times is not None:
@@ -142,8 +150,6 @@ class Schedule():
                             _schedule_notif(self, event, notif.num_timespans * 60, f"{notif.num_timespans} minute(s)")
                         case TimeType.HOUR:
                             _schedule_notif(self, event, notif.num_timespans * 3600, f"{notif.num_timespans} hour(s)")
-                        case TimeType.DAY:
-                            _schedule_notif(self, event, notif.num_timespans * 86400, f"{notif.num_timespans} day(s)")
                         case _:
                             print(f"Unsupported time type: {notif.timespan_type}, skipping.")
 
