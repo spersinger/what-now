@@ -183,7 +183,7 @@ Builder.load_string('''
             background_color:
                 (0.26, 0.38, 0.54, 1) if self.state == 'down' else (0.32, 0.45, 0.62, 1)
 
-            on_release: root.record_button_pressed()
+            on_release: root.start_voice()
         Button:
             id: submit_voice_button
             text: "Submit"

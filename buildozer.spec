@@ -37,7 +37,7 @@ version = 0.1
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = python3, kivy, requests, opencv, plyer
+requirements = python3, kivy, requests, opencv, setuptools, speechrecognition, pyaudio, portaudio
 
 # (str) Custom source folders for requirements
 # Sets custom source for any requirements with recipes
@@ -273,7 +273,7 @@ android.api = 34
 #android.logcat_filters = *:S python:D
 
 # (bool) Android logcat only display log for activity's pid
-#android.logcat_pid_only = False
+android.logcat_pid_only = True
 
 # (str) Android additional adb arguments
 #android.adb_args = -H host.docker.internal
@@ -331,7 +331,7 @@ android.allow_backup = True
 #p4a.source_dir =
 
 # (str) The directory in which python-for-android should look for your own build recipes (if any)
-#p4a.local_recipes =
+p4a.local_recipes = ./local_recipes
 
 # (str) Filename to the hook for p4a
 #p4a.hook = camerax_provider/gradle_options.py

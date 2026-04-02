@@ -1,5 +1,7 @@
 from kivy.app import App
-from kivy.uix.screenmanager import Screen
+from kivy.uix.screenmanager import ScreenManager, Screen
+import speech_recognition as sr
+import threading
 from kivy.clock import Clock
 
 class Voice(Screen):
@@ -7,44 +9,23 @@ class Voice(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        try:
-            import speech_recognition as sr
-            self.r = sr.Recognizer()
-            self.android = False
-        except:
-            print("on android; using plyer.stt")
-            import plyer
-            self.r = plyer.stt
-            self.android = True
-            if not plyer.stt.exist():
-                self.r = None
-                print("speech to text unavailable on this device")
+        self.listen_thread = None
+        # used to stop recording
+        self.stop_event = threading.Event()
+        # used to change action of the record button
+        # (start vs stop recording)
+        self.listening = False
+        # initialize the speech recognizer
+        self.r = sr.Recognizer()
 
-    def record_button_pressed(self):
-        
-        text = self.ids.record_button.text
-        
-        if text == "Record":
-            self.ids.record_button.text = "S1"
-            self.ids.submit_voice_button.disabled = True
-            
-            if self.android:
-                self.r.start()
-            
-        elif text == "Stop":
-            self.ids.record_button.text = "R1"
-            self.ids.submit_voice_button.disabled = False
-            
-            if self.android:
-                self.r.stop()
-                if len(self.r.results) != 0:
-                    self.ids.voice_text_input.text = self.r.results[0]
-            
-            
-        elif text == "S1":
-            self.ids.record_button.text = "Stop"
-        elif text == "R1":
-            self.ids.record_button.text = "Record"
+
+    def voice_to_string(self, text):
+        app = App.get_running_app()
+        app.voice_input += text + " "
+        self.ids.voice_text_input.text += text + " "
+
+        print(app.voice_input)
+        return
 
     def start_voice(self):
         mic_icon = self.ids.mic_icon
