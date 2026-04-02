@@ -29,3 +29,6 @@
 
 # source files
 !src/*.py
+
+# recipe files
+!local_recipes/*
