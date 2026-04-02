@@ -114,7 +114,6 @@ class Schedule():
     
     
     def notify_daily(self):
-        now = datetime.datetime.now()
         events_today = self.get_for_date(datetime.date.today())
         self.notifier.send("Daily Overview", f"You have {len(events_today)} events today.")
 
