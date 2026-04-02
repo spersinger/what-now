@@ -1,17 +1,23 @@
 from CalendarEvent import *
 from typing import List
 from Command import Command, Response, CommandType, StatusCode
+from kivy.clock  import Clock
 from copy import deepcopy
 from difflib import SequenceMatcher
 import calendar
+import datetime
+
+from Notifier import Notifier
 
 # contains all of a user's events
 # purpose: manage calendar events
 class Schedule():
     events: List[List[CalendarEvent]] # repeating events grouped together
+    notifier: Notifier
     
     def __init__(self):
         # TODO: Pull events from iCal file
+        self.notifier = Notifier()
         self.events = []
         
     def __cleanup__(self): pass
@@ -107,6 +113,40 @@ class Schedule():
         self.events.append(group)
     
     
+    def notify_daily(self):
+        now = datetime.datetime.now()
+        events_today = self.get_for_date(datetime.date.today())
+        self.notifier.send("Daily Overview", f"You have {len(events_today)} events today.")
+
+
+    def setup_notification_callbacks(self):
+        def _schedule_notif(self, event, seconds_before, label):
+            notif_time = datetime.datetime.combine(datetime.date.today(), event.time_range.start_time) - datetime.timedelta(seconds=seconds_before)
+            delay = (notif_time - datetime.datetime.now()).total_seconds()
+            if delay >= 0:
+                Clock.schedule_once(
+                    lambda dt, e=event, l=label: self.notifier.send(
+                        f"{e.name}",
+                        f"{e.name} in {l}"
+                    ),
+                    delay
+                )
+
+        now = datetime.datetime.now()
+        events_today = self.get_for_date(datetime.date.today())
+        for event in events_today:
+            if event.notif_times is not None:
+                for notif in event.notif_times:
+                    match notif.timespan_type:
+                        case TimeType.MINUTE:
+                            _schedule_notif(self, event, notif.num_timespans * 60, f"{notif.num_timespans} minute(s)")
+                        case TimeType.HOUR:
+                            _schedule_notif(self, event, notif.num_timespans * 3600, f"{notif.num_timespans} hour(s)")
+                        case TimeType.DAY:
+                            _schedule_notif(self, event, notif.num_timespans * 86400, f"{notif.num_timespans} day(s)")
+                        case _:
+                            print(f"Unsupported time type: {notif.timespan_type}, skipping.")
+
     
     # leave index None to delete whole group
     def delete_event(self, group:int, index:int=None):

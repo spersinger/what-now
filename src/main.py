@@ -102,23 +102,26 @@ class Home(Screen):
         self.add_event(CalendarEvent(
             name="Intro to Computing",
             desc="Intro to Computing class",
-            notifs=None,
-            dates=DateRange("3/2"),
+            notifs=[NotifTime(15)],
+            dates=DateRange("4/1"),
             times=TimeRange("9:00a", "10:00a"),
             repeat=Repeat("week mwf", "forever")
         ))
         self.add_event(CalendarEvent(
             name="Language Translation",
             desc="Language Translation class",
-            notifs=None,
-            dates=DateRange("3/3"),
+            notifs=[NotifTime(15)],
+            dates=DateRange("4/2"),
             times=TimeRange("12:30p", "1:45p"),
             repeat=Repeat("week tr", "forever")
         ))
+
         search_event_btn = self.ids.search_event_button
         search_event_btn.bind(on_release=lambda *a: self.search_event_popup())
         add_event_btn = self.ids.add_event_button
         add_event_btn.bind(on_release=lambda *a: self.add_event_popup())
+        user_schedule.notify_daily()
+        user_schedule.setup_notification_callbacks()
 
     def search_event_popup(self):
         '''
@@ -407,7 +410,7 @@ class Home(Screen):
             self.add_event(CalendarEvent(
                 name=name,
                 desc=desc_input.text.strip() or None,
-                notifs=None,
+                notifs=[NotifTime(15)],
                 dates=DateRange(date_str),
                 times=TimeRange(time_start, time_end),
                 repeat=repeat
