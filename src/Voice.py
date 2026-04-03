@@ -12,6 +12,7 @@ import threading
 from kivy.clock import Clock
 import re
 
+
 from Command import CommandType
 from globals import user_schedule, command_interpreter
 import CalendarEvent
@@ -161,7 +162,7 @@ class Voice(Screen):
 
     def build_accept_command_ui_popup(self, command):
         content = BoxLayout(orientation='vertical', padding=10, spacing=10, size_hint = (1,1))
-        button_box = BoxLayout(orientation='horizontal', padding=10, spacing=10)
+        button_box = BoxLayout(orientation='horizontal', padding=10, spacing=10, height = 50)
         #inputs for changed TextInput to be placed in data
         inputs = {}
 
@@ -427,14 +428,14 @@ class Voice(Screen):
                 content.add_widget(repeat_input)
                 inputs["repeat"] = repeat_input
 
-        accept_btn = Button(text='Accept', size_hint=(1,0.1))
+        accept_btn = Button(text='Accept', size_hint_x = 1)
         accept_btn.bind(on_press=lambda x: self.on_accept_command(command, inputs))
 
-        accept_all_btn = Button(text='Accept all', size_hint=(1,0.1))
-        accept_all_btn.bind(on_press=lambda x: self.on_accept_all_commands(command,inputs))
+        reject_btn = Button(text='Reject', size_hint_x = 1)
+        reject_btn.bind(on_press=lambda x: self.on_reject_command())
 
         button_box.add_widget(accept_btn)
-        button_box.add_widget(accept_all_btn)
+        button_box.add_widget(reject_btn)
 
         content.add_widget(button_box)
 
@@ -520,6 +521,15 @@ class Voice(Screen):
         self.current_command_index += 1
         self.show_next_command()  # Show the next command
 
+    def on_reject_command(self):
+        self.accept_command_popup.dismiss()
+
+        # just skip this command
+        self.current_command_index += 1
+
+        self.show_next_command()
+
+    '''  DONT THINK WE SHOULD USE THIS
     def on_accept_all_commands(self, command,inputs):
         self.accept_command_popup.dismiss()
 
@@ -584,7 +594,7 @@ class Voice(Screen):
             self.current_command_index += 1
 
         self.show_next_command()  # Show the next command
-
+    '''
     def _cleanup(self, _):
         self.commands_to_process = []
         self.current_command_index = 0
