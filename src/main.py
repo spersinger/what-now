@@ -11,14 +11,14 @@ from kivy.uix.widget import Widget
 from kivy.uix.textinput import TextInput
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.gridlayout import GridLayout
-from datetime import date as dt_date
 
 from kivy.core.window import Window
 from kivy.lang import Builder
 from kivy.config import Config
+from kivy.clock  import Clock
 
 import calendar
-from datetime import date
+import datetime
 
 Builder.load_file('../ui/themed.kv')
 Builder.load_file('../ui/home_page.kv')
@@ -52,14 +52,14 @@ class Home(Screen):
         self.refresh()
 
     def refresh(self):
-        today = date.today()
+        today = datetime.date.today()
         self.build_calendar(today.year, today.month)
-        self.build_events(user_schedule.get_for_date(date.today()))
+        self.build_events(user_schedule.get_for_date(datetime.date.today()))
 
     def build_calendar(self, year, month):
         grid = self.ids.calendar_grid
         grid.clear_widgets()
-        today = date.today().day
+        today = datetime.date.today().day
         first_weekday = calendar.monthrange(year, month)[0]
         start_offset = (first_weekday + 1) % 7
         for _ in range(start_offset):
@@ -102,23 +102,41 @@ class Home(Screen):
         self.add_event(CalendarEvent(
             name="Intro to Computing",
             desc="Intro to Computing class",
-            notifs=None,
-            dates=DateRange("3/2"),
+            notifs=[NotifTime(15)],
+            dates=DateRange("4/1"),
             times=TimeRange("9:00a", "10:00a"),
             repeat=Repeat("week mwf", "forever")
         ))
         self.add_event(CalendarEvent(
             name="Language Translation",
             desc="Language Translation class",
-            notifs=None,
-            dates=DateRange("3/3"),
+            notifs=[NotifTime(15)],
+            dates=DateRange("4/2"),
             times=TimeRange("12:30p", "1:45p"),
             repeat=Repeat("week tr", "forever")
         ))
+
         search_event_btn = self.ids.search_event_button
         search_event_btn.bind(on_release=lambda *a: self.search_event_popup())
         add_event_btn = self.ids.add_event_button
         add_event_btn.bind(on_release=lambda *a: self.add_event_popup())
+
+        user_schedule.notify_daily()
+        # Schedule notifications for today
+        user_schedule.setup_notification_callbacks()
+        # Every 24 hours
+        now = datetime.datetime.now()
+        midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        seconds_until_midnight = ((midnight - now).seconds + 86400) % 86400
+        # Schedule notifications at next midnight so we don't miss any
+        Clock.schedule_once(
+            lambda *a: (
+                user_schedule.setup_notification_callbacks(),
+                # Then schedule at next midnight
+                Clock.schedule_interval(lambda *a: user_schedule.setup_notification_callbacks(), 86400)
+            ),
+            seconds_until_midnight
+        )
 
     def search_event_popup(self):
         '''
@@ -158,7 +176,7 @@ class Home(Screen):
                 name= search_term,
                 desc= None,
                 notifs= None,
-                dates= DateRange(date.today(), date.today()),
+                dates= DateRange(datetime.date.today(), datetime.date.today()),
                 times= None,
                 repeat= None,
                 )
@@ -187,7 +205,7 @@ class Home(Screen):
         - Toggle buttons for repeat frequency / end
         '''
 
-        today = dt_date.today()
+        today = datetime.date.today()
 
         # Helpers
 
@@ -407,7 +425,7 @@ class Home(Screen):
             self.add_event(CalendarEvent(
                 name=name,
                 desc=desc_input.text.strip() or None,
-                notifs=None,
+                notifs=[NotifTime(15)],
                 dates=DateRange(date_str),
                 times=TimeRange(time_start, time_end),
                 repeat=repeat
