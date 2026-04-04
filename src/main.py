@@ -1,3 +1,4 @@
+
 try:
     from kivy.app import App
 except ModuleNotFoundError:
@@ -16,6 +17,13 @@ from datetime import date as dt_date
 from kivy.core.window import Window
 from kivy.lang import Builder
 from kivy.config import Config
+
+import icalendar
+from icalendar import Calendar, Event
+from datetime import datetime
+from datetime import time
+import json
+
 
 import calendar
 from datetime import date
@@ -98,28 +106,15 @@ class Home(Screen):
                 ))
 
     def on_kv_post(self, base_widget):
-        # Preseeded, just for now though
-        self.add_event(CalendarEvent(
-            name="Intro to Computing",
-            desc="Intro to Computing class",
-            notifs=None,
-            dates=DateRange("3/2"),
-            times=TimeRange("9:00a", "10:00a"),
-            repeat=Repeat("week mwf", "forever")
-        ))
-        self.add_event(CalendarEvent(
-            name="Language Translation",
-            desc="Language Translation class",
-            notifs=None,
-            dates=DateRange("3/3"),
-            times=TimeRange("12:30p", "1:45p"),
-            repeat=Repeat("week tr", "forever")
-        ))
+        # refresh screen to get loaded events
+        self.refresh()
+
         search_event_btn = self.ids.search_event_button
         search_event_btn.bind(on_release=lambda *a: self.search_event_popup())
         add_event_btn = self.ids.add_event_button
         add_event_btn.bind(on_release=lambda *a: self.add_event_popup())
-
+        save_btn = self.ids.save_button
+        save_btn.bind(on_release=lambda *a: self.save_current_schedule())
     def search_event_popup(self):
         '''
         Popup to create and add a new CalendarEvent.
@@ -178,6 +173,24 @@ class Home(Screen):
                 event_time=str(ev.time_range.start_time) + " - " + str(ev.time_range.end_time),
                 event_date=""
             ))
+
+    def save_current_schedule(self):
+        events = user_schedule.get_all_events()  # flatten all event groups
+        try:
+            user_schedule.save_to_ics(events)  # your already implemented save function
+            popup = ThemedPopup(
+                title="Saved",
+                content=Label(text="Schedule saved"),
+                size_hint=(0.6, 0.3)
+            )
+            popup.open()
+        except Exception as e:
+            popup = ThemedPopup(
+                title="Error",
+                content=Label(text=f"Failed to save schedule:\n{str(e)}"),
+                size_hint=(0.6, 0.3)
+            )
+            popup.open()
 
     def add_event_popup(self):
         '''
@@ -416,6 +429,9 @@ class Home(Screen):
         
         btn.bind(on_release=on_submit)
         popup.open()
+
+    def to_datetime_time(self):
+        return time(self.hour, self.minute)
 
 class Voice(Screen): pass
 

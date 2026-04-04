@@ -4,7 +4,11 @@ from Command import Command, Response, CommandType, StatusCode
 from copy import deepcopy
 from difflib import SequenceMatcher
 import calendar
-
+import json
+import icalendar
+from icalendar import Calendar, Event
+from datetime import datetime
+from datetime import time
 # contains all of a user's events
 # purpose: manage calendar events
 class Schedule():
@@ -13,7 +17,181 @@ class Schedule():
     def __init__(self):
         # TODO: Pull events from iCal file
         self.events = []
-        
+        #auto load events from file
+        self.load_from_ics()
+
+
+    # this function is called on start up to load in the ics file's events
+    def load_from_ics(self,filename="user_schedule.ics"):
+        events = []
+
+        try:
+            with open(filename, 'rb') as f:
+                cal = Calendar.from_ical(f.read())
+        except FileNotFoundError:
+            print("No saved schedule found.")
+            return False
+
+        for component in cal.walk():
+            if component.name == "VEVENT":
+
+                name = str(component.get('summary'))
+                desc = component.get('description')
+
+                start = component.get('dtstart').dt
+                end = component.get('dtend').dt
+
+                # convert back to your objects
+                date_range = DateRange(start.date(), end.date())
+                time_range = TimeRange(
+                    Time(start.hour, start.minute),
+                    Time(end.hour, end.minute)
+                )
+
+                # repeat (basic)
+                custom = component.get('WN-REPEAT')
+                if custom:
+                    data = json.loads(str(custom))
+
+                    #days needs to be a set or None
+                    days_data = data["days"]
+                    if days_data is None:
+                        days = None
+                    else:
+                        days = set(days_data)
+
+                    repeat = Repeat(
+                        RepeatCycle(data["timespan"], days),
+                        RepeatDuration(data["duration_type"], data["duration_value"])
+                    )
+                else:
+                    #default - would rather be none
+                    repeat = None
+
+                # notifications
+                notif_times = []
+                custom_notifs = component.get('WN-NOTIFS')
+                if custom_notifs:
+                    data = json.loads(str(custom_notifs))
+
+                    for n in data:
+                        notif = NotifTime(n["num"],TimeType[n["type"]])
+                        notif_times.append(notif)
+
+                event = CalendarEvent(
+                    name=name,
+                    desc=desc,
+                    notifs=notif_times,
+                    dates=date_range,
+                    times=time_range,
+                    repeat=repeat
+                )
+                events.append(event)
+
+        self.events = [[e] for e in events]
+
+        return True
+
+
+    # function saves events to .ics file
+    def save_to_ics(self,events, filename="user_schedule.ics"):
+        # cal used for the Calendar inside ics file
+        cal = Calendar()
+
+        for e in events:
+            event = Event()
+            event.add('summary', e.name)
+
+            if e.description:
+                event.add('description', e.description)
+
+            # combine date + time
+            start_dt = datetime.combine(
+                e.date_range.start_date,
+                e.time_range.start_time
+            )
+
+            end_dt = datetime.combine(
+                e.date_range.end_date,
+                e.time_range.end_time
+            )
+
+            event.add('dtstart', start_dt)
+            event.add('dtend', end_dt)
+
+            # basic repeat in file for compatibility
+            if e.repeat and e.repeat.cycle:
+                cycle = e.repeat.cycle
+
+                #rrule is only for compatibility
+                #is not used when loading the events for us
+                rrule = {}
+                if cycle.timespan == TimeType.DAY:
+                    rrule['freq'] = 'daily'
+                elif cycle.timespan == TimeType.WEEK:
+                    rrule['freq'] = 'weekly'
+                    if cycle.days:
+                        day_map_ical = {'m': 'MO', 't': 'TU', 'w': 'WE', 'r': 'TH', 'f': 'FR', 's': 'SA', 'u': 'SU'}
+                        rrule['byday'] = [day_map_ical[self.day_mapping(d)] for d in cycle.days]
+
+                elif cycle.timespan == TimeType.MONTH:
+                    rrule['freq'] = 'monthly'
+                elif cycle.timespan == TimeType.YEAR:
+                    rrule['freq'] = 'yearly'
+
+                event.add('rrule', rrule)
+
+                for d in cycle.days:
+                    print(type(d), d)
+                #the real value to place our entire repeat value
+                repeat_data = {
+                    "timespan": cycle.timespan.name.lower(),  # "day", "week", etc.
+                    "days": [self.day_mapping(d) for d in cycle.days] if cycle.days else None,
+                    "duration_type": e.repeat.duration.dur_type.name.lower(),
+                    "duration_value": e.repeat.duration.value
+                }
+
+                event.add('WN-REPEAT', json.dumps(repeat_data))
+
+            #TODO: save compatible notif times,like we do for repeat
+            # that we will not use
+
+            ## notifications - for our use
+            # DO NOT KNOW IF THIS IS CORRECT, NEED TO MERGE TO BE ABLE TO TEST
+            if e.notif_times:
+
+                notif_data = []
+                for n in e.notif_times:
+                    notif_data.append({
+                        "num": n.num_timespans,
+                        "type": n.timespan_type.name
+                    })
+
+                event.add('WN-NOTIFS', json.dumps(notif_data))
+
+            cal.add_component(event)
+
+        with open(filename, 'wb') as f:
+            f.write(cal.to_ical())
+
+    def day_mapping(self,d: Day) -> str:
+        match d:
+            case Day.MONDAY:
+                return 'm'
+            case Day.TUESDAY:
+                return 't'
+            case Day.WEDNESDAY:
+                return 'w'
+            case Day.THURSDAY:
+                return 'r'
+            case Day.FRIDAY:
+                return 'f'
+            case Day.SATURDAY:
+                return 's'
+            case Day.SUNDAY:
+                return 'u'
+
+    # TODO: Do we want to use this to auto save the schedule?
     def __cleanup__(self): pass
         # Save events to iCal file
         
@@ -247,5 +425,12 @@ class Schedule():
                 result += str(event) + "\n"
             
         return result
+
+    def get_all_events(self) -> List[CalendarEvent]:
+        """get all groups into a single list of events."""
+        all_events = []
+        for group in self.events:
+            all_events.extend(group)
+        return all_events
     
 # TODO: try/except with error propogation instead of None/assert usage? (everywehre, not just this file)
