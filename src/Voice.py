@@ -238,7 +238,7 @@ class Voice(Screen):
             )
             inputs["time"] = time_input
 
-            repeat_label = Label(text='Date range:', size_hint_y=None, height=30, halign='left')
+            repeat_label = Label(text='Repeat:', size_hint_y=None, height=30, halign='left')
             repeat_label.bind(size=lambda s, w: s.setter('text_size')(s, (s.width, None)))
             repeat_input = TextInput(
                 text=str(command.data.repeat),
