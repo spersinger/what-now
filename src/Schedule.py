@@ -33,6 +33,9 @@ class Schedule():
             return False
 
         for component in cal.walk():
+            # we only use VEVENT
+            #other component types are not compatible
+            #and will not be included in our app
             if component.name == "VEVENT":
 
                 name = str(component.get('summary'))
@@ -41,14 +44,14 @@ class Schedule():
                 start = component.get('dtstart').dt
                 end = component.get('dtend').dt
 
-                # convert back to your objects
+                # convert back to our objects
                 date_range = DateRange(start.date(), end.date())
                 time_range = TimeRange(
                     Time(start.hour, start.minute),
                     Time(end.hour, end.minute)
                 )
 
-                # repeat (basic)
+                # repeat
                 custom = component.get('WN-REPEAT')
                 if custom:
                     data = json.loads(str(custom))
@@ -65,7 +68,6 @@ class Schedule():
                         RepeatDuration(data["duration_type"], data["duration_value"])
                     )
                 else:
-                    #default - would rather be none
                     repeat = None
 
                 # notifications
@@ -141,8 +143,6 @@ class Schedule():
 
                 event.add('rrule', rrule)
 
-                for d in cycle.days:
-                    print(type(d), d)
                 #the real value to place our entire repeat value
                 repeat_data = {
                     "timespan": cycle.timespan.name.lower(),  # "day", "week", etc.
