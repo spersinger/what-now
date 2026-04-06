@@ -95,12 +95,14 @@ class Home(Screen):
             for i, ev in enumerate(events):
                 if i > 0:
                     box.add_widget(Widget(size_hint_y=None, height=1))
-                box.add_widget(EditEventItem(
+                edit_event = EditEventItem(
                     event_type='Lecture',
                     event_name=ev.name,
                     event_time=str(ev.time_range.start_time) + " - " + str(ev.time_range.end_time),
                     event_date=""
-                ))
+                )
+                edit_event.set_event(ev)
+                box.add_widget(edit_event)
 
     def on_kv_post(self, base_widget):
         # Preseeded, just for now though
@@ -129,10 +131,12 @@ class Home(Screen):
         user_schedule.notify_daily()
         # Schedule notifications for today
         user_schedule.setup_notification_callbacks()
+
         # Every 24 hours
         now = datetime.datetime.now()
         midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
         seconds_until_midnight = ((midnight - now).seconds + 86400) % 86400
+
         # Schedule notifications at next midnight so we don't miss any
         Clock.schedule_once(
             lambda *a: (
@@ -195,12 +199,15 @@ class Home(Screen):
             ))
         else:
             ev, g_idx, e_idx = result  # unpack the tuple
-            layout.add_widget(EditEventItem(
+            edit_event = EditEventItem(
                 event_type='Lecture',
                 event_name=ev.name,
                 event_time=str(ev.time_range.start_time) + " - " + str(ev.time_range.end_time),
                 event_date=""
-            ))
+            )
+            edit_event.set_event(ev)
+            layout.add_widget(edit_event)
+
 
     def add_event_popup(self):
         '''
