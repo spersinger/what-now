@@ -9,16 +9,18 @@ from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.widget import Widget
 from kivy.uix.textinput import TextInput
+from kivy.properties import StringProperty
+from kivy.uix.button import Button
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.gridlayout import GridLayout
-from datetime import date as dt_date
 
 from kivy.core.window import Window
 from kivy.lang import Builder
 from kivy.config import Config
+from kivy.clock  import Clock
 
 import calendar
-from datetime import date
+import datetime
 
 Builder.load_file('../ui/themed.kv')
 Builder.load_file('../ui/home_page.kv')
@@ -42,6 +44,9 @@ from Voice import Voice
 from document_scanner import DocumentScanner
 from ui import *
 from globals import user_schedule, command_interpreter
+from kivy.uix.camera import Camera
+from kivy.clock import Clock
+
 
 import calendar
 
@@ -127,7 +132,7 @@ class Home(Screen):
     def build_calendar(self, year, month):
         grid = self.ids.calendar_grid
         grid.clear_widgets()
-        today = date.today().day
+        today = datetime.date.today().day
         first_weekday = calendar.monthrange(year, month)[0]
         start_offset = (first_weekday + 1) % 7
         for _ in range(start_offset):
@@ -170,25 +175,43 @@ class Home(Screen):
         self.add_event(CalendarEvent(
             name="Intro to Computing",
             desc="Intro to Computing class",
-            notifs=None,
-            dates=DateRange("3/2"),
+            notifs=[NotifTime(15)],
+            dates=DateRange("4/1"),
             times=TimeRange("9:00a", "10:00a"),
             repeat=Repeat("week mwf", "forever")
         ))
         self.add_event(CalendarEvent(
             name="Language Translation",
             desc="Language Translation class",
-            notifs=None,
-            dates=DateRange("3/3"),
+            notifs=[NotifTime(15)],
+            dates=DateRange("4/2"),
             times=TimeRange("12:30p", "1:45p"),
             repeat=Repeat("week tr", "forever")
         ))
+
         search_event_btn = self.ids.search_event_button
         search_event_btn.bind(on_release=lambda *a: self.search_event_popup())
         add_event_btn = self.ids.add_event_button
         add_event_btn.bind(on_release=lambda *a: self.add_event_popup())
         change_view_type_btn = self.ids.change_view_type_button
         change_view_type_btn.bind(on_release=lambda *a: self.toggle_view())
+
+        user_schedule.notify_daily()
+        # Schedule notifications for today
+        user_schedule.setup_notification_callbacks()
+        # Every 24 hours
+        now = datetime.datetime.now()
+        midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        seconds_until_midnight = ((midnight - now).seconds + 86400) % 86400
+        # Schedule notifications at next midnight so we don't miss any
+        Clock.schedule_once(
+            lambda *a: (
+                user_schedule.setup_notification_callbacks(),
+                # Then schedule at next midnight
+                Clock.schedule_interval(lambda *a: user_schedule.setup_notification_callbacks(), 86400)
+            ),
+            seconds_until_midnight
+        )
 
     def search_event_popup(self):
         '''
@@ -209,7 +232,7 @@ class Home(Screen):
         search_bar = BoxLayout(orientation='horizontal', spacing=6, padding=10)
         name_input = TextInput(hint_text="e.g. Intro to Computing",
                                multiline=False, size_hint_y=None, height=40)
-        search_button = PrimaryButton(text="Search", size_hint_x=0.15, 
+        search_button = PrimaryButton(text="Search", size_hint_x=0.15,
                                       size_hint_y=None, height=44)
 
         root.add_widget(Label(text="Event Name *", size_hint_y=None, height=28,
@@ -228,7 +251,7 @@ class Home(Screen):
                 name= search_term,
                 desc= None,
                 notifs= None,
-                dates= DateRange(date.today(), date.today()),
+                dates= DateRange(datetime.date.today(), datetime.date.today()),
                 times= None,
                 repeat= None,
                 )
@@ -257,7 +280,7 @@ class Home(Screen):
         - Toggle buttons for repeat frequency / end
         '''
 
-        today = dt_date.today()
+        today = datetime.date.today()
 
         # Helpers
 
@@ -306,7 +329,7 @@ class Home(Screen):
             date_row.add_widget(sp)
         layout.add_widget(date_row)
 
-        # Time pickers 
+        # Time pickers
         hours   = [str(h) for h in range(1, 13)]
         minutes = [f"{m:02d}" for m in range(0, 60, 5)]
         ampm    = ["AM", "PM"]
@@ -477,13 +500,13 @@ class Home(Screen):
             self.add_event(CalendarEvent(
                 name=name,
                 desc=desc_input.text.strip() or None,
-                notifs=None,
+                notifs=[NotifTime(15)],
                 dates=DateRange(date_str),
                 times=TimeRange(time_start, time_end),
                 repeat=repeat
             ))
             popup.dismiss()
-        
+
         btn.bind(on_release=on_submit)
         popup.open()
 
@@ -497,10 +520,21 @@ class Scanner(Screen):
         self.ids.cam_view.ids.camera.play = False
 
 class Edit(Screen): pass
+
+#Helps kivy manage screen_name correctly
+#part of fixing the problem in root
+class NavButton(Button):
+    screen_name =StringProperty("")
+
 class Root(BoxLayout):
+
     def set_active(self, screen_name):
         sm = self.ids.sm
+
         sm.current = screen_name
+
+        for btn_id in ("home_button", "voice_button", "scanner_button"):
+            btn = self.ids[btn_id]
 
         for btn_id, name in (
             ("home_button", "Home"),
@@ -519,8 +553,10 @@ class Root(BoxLayout):
 class WhatNow(App):
     def build(self):
         self.title = "What Now?"
-        # string for voice input to be used by command interpreter
-        self.voice_input = ""
+        # create a shared instance of command interpreter
+        #self.command_interpreter = command_interpreter
+        #self.schedule = user_schedule
+
         return Root()
 
 

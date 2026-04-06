@@ -6,6 +6,12 @@ import time
 import cv2
 from PIL import Image
 
+from pathlib import Path
+# Get the path to the project root (one level up from src)
+project_root = Path(__file__).resolve().parent.parent
+model = project_root / "models" / "qwen2.5-coder-1.5b-instruct-q4_0.gguf"
+
+
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 class LocalSyllabusParser:
@@ -15,7 +21,7 @@ class LocalSyllabusParser:
         model_path: path to .gguf file
         """
         self.llm = Llama(
-            model_path="models/qwen2.5-coder-1.5b-instruct-q4_0.gguf",
+            model_path = str(model),
             n_ctx=4096,  # Context window
             n_threads=4,  # CPU threads
             n_gpu_layers=0,  # Set to 35 for GPU acceleration
