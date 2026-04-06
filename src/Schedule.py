@@ -37,6 +37,8 @@ class Schedule():
             for g_idx, group in enumerate(self.events):
                 if group[0].name == search_term.name:
                     return (group[0], g_idx, None)
+            return None
+
         else:
             date = search_term.date_range.start_date # start date: search term
             
@@ -89,7 +91,7 @@ class Schedule():
         return days
     
     def add_event(self, event:CalendarEvent):
-        
+
         # create group to hold event(s)
         group: List[CalendarEvent] = []
         num_repeats = -1
@@ -111,6 +113,7 @@ class Schedule():
         
         # append the group to the group list
         self.events.append(group)
+
     
     
     def notify_daily(self):
@@ -220,7 +223,7 @@ class Schedule():
     # ex. create/modify/delete event
     def perform_command(self, command:Command) -> Response:
         response = Response()
-    
+
         # yeah whatever we have to do this instead of 
         # just using the enums like it should be
         match command.c_type.name:
@@ -255,7 +258,7 @@ class Schedule():
 
             case "ADD":
                 # TODO: error handling?
-                self.add_event(command.event)
+                self.add_event(command.data)
                 response.status = StatusCode.SUCCESS
                 response.status_details = "event was added to calendar."
 

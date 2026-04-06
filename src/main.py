@@ -9,6 +9,8 @@ from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.widget import Widget
 from kivy.uix.textinput import TextInput
+from kivy.properties import StringProperty
+from kivy.uix.button import Button
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.gridlayout import GridLayout
 
@@ -42,6 +44,9 @@ from Voice import Voice
 from document_scanner import DocumentScanner
 from ui import *
 from globals import user_schedule, command_interpreter
+from kivy.uix.camera import Camera
+from kivy.clock import Clock
+
 
 import calendar
 
@@ -157,7 +162,7 @@ class Home(Screen):
         search_bar = BoxLayout(orientation='horizontal', spacing=6, padding=10)
         name_input = TextInput(hint_text="e.g. Intro to Computing",
                                multiline=False, size_hint_y=None, height=40)
-        search_button = PrimaryButton(text="Search", size_hint_x=0.15, 
+        search_button = PrimaryButton(text="Search", size_hint_x=0.15,
                                       size_hint_y=None, height=44)
 
         root.add_widget(Label(text="Event Name *", size_hint_y=None, height=28,
@@ -254,7 +259,7 @@ class Home(Screen):
             date_row.add_widget(sp)
         layout.add_widget(date_row)
 
-        # Time pickers 
+        # Time pickers
         hours   = [str(h) for h in range(1, 13)]
         minutes = [f"{m:02d}" for m in range(0, 60, 5)]
         ampm    = ["AM", "PM"]
@@ -431,7 +436,7 @@ class Home(Screen):
                 repeat=repeat
             ))
             popup.dismiss()
-        
+
         btn.bind(on_release=on_submit)
         popup.open()
 
@@ -445,10 +450,21 @@ class Scanner(Screen):
         self.ids.cam_view.ids.camera.play = False
 
 class Edit(Screen): pass
+
+#Helps kivy manage screen_name correctly
+#part of fixing the problem in root
+class NavButton(Button):
+    screen_name =StringProperty("")
+
 class Root(BoxLayout):
+
     def set_active(self, screen_name):
         sm = self.ids.sm
+
         sm.current = screen_name
+
+        for btn_id in ("home_button", "voice_button", "scanner_button"):
+            btn = self.ids[btn_id]
 
         for btn_id, name in (
             ("home_button", "Home"),
@@ -467,8 +483,10 @@ class Root(BoxLayout):
 class WhatNow(App):
     def build(self):
         self.title = "What Now?"
-        # string for voice input to be used by command interpreter
-        self.voice_input = ""
+        # create a shared instance of command interpreter
+        #self.command_interpreter = command_interpreter
+        #self.schedule = user_schedule
+
         return Root()
 
 
