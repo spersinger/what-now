@@ -1,7 +1,7 @@
-diff -u a/configure b/configure
---- a/configure
-+++ b/configure
-@@ -15971,13 +15971,13 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+diff -Naur portaudio-19.7.0-orig/configure portaudio-19.7.0/configure
+--- portaudio-19.7.0-orig/configure	2021-03-31 20:17:30.000000000 -0400
++++ portaudio-19.7.0/configure	2026-04-06 14:03:48.868996514 -0400
+@@ -15971,13 +15971,13 @@
          ;;
  
    irix* )
@@ -18,7 +18,7 @@ diff -u a/configure b/configure
  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
  /* end confdefs.h.  */
  
-@@ -16012,7 +16012,7 @@ if test "x$ac_cv_lib_pthread_pthread_create" = xyes; then :
+@@ -16012,7 +16012,7 @@
  #define HAVE_LIBPTHREAD 1
  _ACEOF
  
@@ -27,7 +27,7 @@ diff -u a/configure b/configure
  
  else
    as_fn_error $? "IRIX posix thread library not found!" "$LINENO" 5
-@@ -16122,7 +16122,7 @@ fi
+@@ -16122,7 +16122,7 @@
  
          OTHER_OBJS="pa_sgi/pa_sgi.o src/os/unix/pa_unix_hostapis.o src/os/unix/pa_unix_util.o"
  
@@ -36,7 +36,7 @@ diff -u a/configure b/configure
          PADLL="libportaudio.so"
          SHARED_FLAGS=""
          ;;
-@@ -16131,13 +16131,13 @@ fi
+@@ -16131,13 +16131,13 @@
  
          CFLAGS="$CFLAGS -I\$(top_srcdir)/src/os/unix"
  
@@ -53,7 +53,7 @@ diff -u a/configure b/configure
  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
  /* end confdefs.h.  */
  
-@@ -16210,8 +16210,8 @@ fi
+@@ -16210,8 +16210,8 @@
  
          fi
  
@@ -64,12 +64,3 @@ diff -u a/configure b/configure
          PADLL="libportaudio.so"
  
          ## support sun cc compiler flags
-@@ -16222,7 +16222,7 @@ fi
-               ;;
-            *)
-               SHARED_FLAGS="-fPIC"
--              THREAD_CFLAGS="-lpthread"
-+              THREAD_CFLAGS="-pthread"
-               ;;
-         esac
- 
