@@ -31,6 +31,15 @@
                     text_size: self.width, None
 
                 PrimaryButton:
+                    id: change_view_type_button
+                    text: '[b]Change View[/b]'
+                    size_hint_x: None
+                    size_hint_y: None
+                    height: '36dp'
+                    disabled: False
+                    view_type: "month"
+
+                PrimaryButton:
                     id: search_event_button 
                     text: '[b]Search[/b]'
                     size_hint_x: None

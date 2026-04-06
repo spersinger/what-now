@@ -47,14 +47,82 @@ import calendar
 
 # TODO: Move to seperate file
 class Home(Screen):
+    view_type = "month"
+
     def add_event(self, event: CalendarEvent):
         user_schedule.add_event(event)
         self.refresh()
 
     def refresh(self):
         today = date.today()
-        self.build_calendar(today.year, today.month)
+        if self.view_type == "month":
+            self.build_calendar(today.year, today.month)
+        else:
+            self.build_week_calendar()
+
         self.build_events(user_schedule.get_for_date(date.today()))
+
+    def toggle_view(self):
+        if self.view_type == "month":
+            self.view_type = "week"
+            self.ids.change_view_type_button.text = "[b]Month View[/b]"
+            self.build_week_calendar()
+        else:
+            self.view_type = "month"
+            self.ids.change_view_type_button.text = "[b]Week View[/b]"
+            today = date.today()
+            self.build_calendar(today.year, today.month)
+
+    def build_week_calendar(self):
+        from datetime import timedelta
+        grid = self.ids.calendar_grid
+        grid.clear_widgets()
+
+        today = date.today()
+
+        # If weekend (Sat=5, Sun=6), show next week; otherwise show current week
+        weekday = today.weekday()  # Mon=0 ... Sun=6
+        if weekday >= 5:
+            # Jump to next Monday
+            days_until_monday = 7 - weekday
+            week_start = today + timedelta(days=days_until_monday)
+        else:
+            # Start of current week (Monday)
+            week_start = today - timedelta(days=weekday)
+
+        week_days = [week_start + timedelta(days=i) for i in range(7)]
+
+        # Day-of-week headers
+        day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        for name in day_names:
+            grid.add_widget(Label(
+                text=name,
+                size_hint_y=None,
+                height=20,
+                font_size='11sp',
+                color=(0.6, 0.6, 0.6, 1)
+            ))
+
+        # Day cells
+        event_counts = {}
+        for d in week_days:
+            events = user_schedule.get_for_date(d)
+            event_counts[d.day] = len(events)
+
+        for d in week_days:
+            count = event_counts.get(d.day, 0)
+            if d == today:
+                cell = CalendarDayToday(day_text=str(d.day), event_count=count)
+            else:
+                color = [1, 1, 1, 1]
+                cell = CalendarDayCell(day_text=str(d.day), day_color=color, event_count=count)
+            grid.add_widget(cell)
+
+        # Show events for the whole week in the events box
+        all_events = []
+        for d in week_days:
+            all_events.extend(user_schedule.get_for_date(d))
+        self.build_events(all_events)
 
     def build_calendar(self, year, month):
         grid = self.ids.calendar_grid
@@ -65,7 +133,7 @@ class Home(Screen):
         for _ in range(start_offset):
             grid.add_widget(Widget(size_hint_y=None, height=30))
 
-        event_counts = user_schedule.get_event_counts(year, month)  # dict: {day: count}
+        event_counts = user_schedule.get_event_counts(year, month)
 
         for day in range(1, calendar.monthrange(year, month)[1] + 1):
             count = event_counts.get(day, 0)
@@ -119,6 +187,8 @@ class Home(Screen):
         search_event_btn.bind(on_release=lambda *a: self.search_event_popup())
         add_event_btn = self.ids.add_event_button
         add_event_btn.bind(on_release=lambda *a: self.add_event_popup())
+        change_view_type_btn = self.ids.change_view_type_button
+        change_view_type_btn.bind(on_release=lambda *a: self.toggle_view())
 
     def search_event_popup(self):
         '''
