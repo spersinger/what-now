@@ -71,11 +71,13 @@ class Home(Screen):
         if self.view_type == "month":
             self.view_type = "week"
             self.ids.change_view_type_button.text = "[b]Month View[/b]"
+            self.ids.events_box_header_label.text = "[b]This Weeks Events[/b]"
             self.build_week_calendar()
         else:
             self.view_type = "month"
             self.ids.change_view_type_button.text = "[b]Week View[/b]"
             today = date.today()
+            self.ids.events_box_header_label.text = "[b]Today's Events[/b]"
             self.build_calendar(today.year, today.month)
 
     def build_week_calendar(self):
@@ -109,18 +111,18 @@ class Home(Screen):
             ))
 
         # Day cells
-        event_counts = {}
+        events = {}
         for d in week_days:
-            events = user_schedule.get_for_date(d)
-            event_counts[d.day] = len(events)
+            event_d = user_schedule.get_for_date(d)
+            events[d.day] = event_d
 
         for d in week_days:
-            count = event_counts.get(d.day, 0)
+            events_day_list = events.get(d.day, 0)
             if d == today:
-                cell = CalendarDayToday(day_text=str(d.day), event_count=count)
+                cell = CalendarDayToday(day_text=str(d.day), event_count=len(events_day_list), events=events_day_list)
             else:
                 color = [1, 1, 1, 1]
-                cell = CalendarDayCell(day_text=str(d.day), day_color=color, event_count=count)
+                cell = CalendarDayCell(day_text=str(d.day), day_color=color, event_count=len(events_day_list), events=events_day_list)
             grid.add_widget(cell)
 
         # Show events for the whole week in the events box
