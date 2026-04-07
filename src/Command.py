@@ -415,7 +415,7 @@ class CommandInterpreter:
         return notifs
 
     # manual parse for repeat
-    def parse_repeat(self, repeat_data, start, end) -> Repeat:
+    def parse_repeat(self, repeat_data, start, end) -> Repeat or None:
         # repeat_data is a dictionary from the AI model
 
         if repeat_data:
@@ -439,10 +439,10 @@ class CommandInterpreter:
         start_dow = day_map[start.strftime("%A")]
         end_dow = day_map[end.strftime("%A")]
 
-        ##TODO: Fix parsing for cycle and duration (LET IT BE NONE)
         # Handle cycle
-        if pattern is None:
-            repeat_cycle = RepeatCycle("day", start_dow)  # default
+        if pattern is None or duration is None:
+            repeat_cycle = None # default
+            repeat_duration = None
         elif pattern.lower() == "every day":
             repeat_cycle = RepeatCycle("day", start_dow)
         elif pattern.lower() == "every week":
@@ -455,8 +455,9 @@ class CommandInterpreter:
             repeat_cycle = RepeatCycle("day", start_dow)  # fallback
 
         # Handle duration
-        if duration is None:
-            repeat_duration = RepeatDuration("times", 0)
+        if pattern is None or duration is None:
+            repeat_cycle = None # default
+            repeat_duration = None
         elif duration.lower() == "forever":
             repeat_duration = RepeatDuration("forever", 500)
         elif "times" in duration:
@@ -466,9 +467,12 @@ class CommandInterpreter:
             date_str = re.search(r"until (.+)", duration).group(1)
             repeat_duration = RepeatDuration("until", end)
         else:
-            repeat_duration = RepeatDuration("times", 0)  # fallback
+            repeat_duration = RepeatDuration("times", 0)
 
-        return Repeat(repeat_cycle, repeat_duration)
+        if repeat_cycle or repeat_duration:
+            return Repeat(repeat_cycle, repeat_duration)
+        else:
+            return None
 
     # interpret text input and create one or more commands based on it
     # (use AI model to transform text into list of commands)
@@ -506,7 +510,10 @@ class CommandInterpreter:
                 notifs = self.parse_notifications(cmd_data["notifications"])
 
                 # repeat
-                repeat = self.parse_repeat(cmd_data["repeat"], start_date, end_date)
+                if cmd_data["repeat"]:
+                    repeat = self.parse_repeat(cmd_data["repeat"], start_date, end_date)
+                else:
+                    repeat = None
 
                 event = CalendarEvent(
                     name=name,
@@ -541,9 +548,11 @@ class CommandInterpreter:
                 # notifications
                 notifs = self.parse_notifications(cmd_data["notifications"])
 
-                # repeat doesnt matter, just need a value
-                repeat = Repeat(RepeatCycle("day", "m"), RepeatDuration("times", 0))
-
+                # repeat
+                if cmd_data["repeat"]:
+                    repeat = self.parse_repeat(cmd_data["repeat"], start_date, end_date)
+                else:
+                    repeat = None
                 # for delete we only need a name and optional date.
                 #but we must have values for the others
                 event = CalendarEvent(
@@ -602,14 +611,18 @@ class CommandInterpreter:
                 if update_dates:
                     update_sd = self.parse_date(update_dates.get("start_date"), cmd_type)
                     update_ed = self.parse_date(update_dates.get("end_date"),cmd_type)
-                    if update_repeat:
-                        repeat = self.parse_repeat(update_repeat, update_sd, update_ed)
-                    else:
-                        # TODO: WOULD LIKE THIS TO BE NONE
-                        repeat = Repeat(RepeatCycle("day", "m"), RepeatDuration("times", 0))
+
                 else:
                     update_sd = None
                     update_ed = None
+
+                if update_repeat:
+                    repeat = self.parse_repeat(update_repeat, update_sd, update_ed)
+                else:
+                    repeat = None
+
+                search_repeat = None
+
 
                 # Create a CalendarEvent for old values to search
                 search_event = CalendarEvent(
@@ -619,7 +632,7 @@ class CommandInterpreter:
                     dates=target_daterange,
                     times=None,
                     # repeat doesnt matter for the search
-                    repeat=Repeat(RepeatCycle("day", "m"), RepeatDuration("times", 0))
+                    repeat= search_repeat
                 )
 
                 # Create a CalendarEvent only for the new values
@@ -629,12 +642,9 @@ class CommandInterpreter:
                     notifs=update_notif,
                     dates=DateRange(update_sd, update_ed),
                     times=update_time,
-                    # repeat needs to accept None in case it doesn't need to be changed
                     repeat=repeat
                 )
-                # prints are just here to test the data, looking pretty good
-                print(search_event)
-                print(updated_event)
+
                 self.commands.append(Command(CommandType.EDIT, data=(search_event, updated_event)))
 
             #TODO: ERROR FOR INVALID COMMAND
