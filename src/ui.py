@@ -131,8 +131,7 @@ class CalendarDayCell(ButtonBehavior, BoxLayout):
                                     size_hint_y=None, halign='left')) 
         if len(events) == 0:
             layout.add_widget(EventItem(
-                event_type='No Events Today! Enjoy your day off!',
-                event_name="",
+                event_name="No Events Today! Enjoy your day off!",
                 event_time="",
                 event_date=""
             ))
@@ -141,7 +140,6 @@ class CalendarDayCell(ButtonBehavior, BoxLayout):
                 if i > 0:
                     layout.add_widget(Widget(size_hint_y=None, height=1))
                 edit_event = EditEventItem(
-                    event_type='Lecture',
                     event_name=ev.name,
                     event_time=str(ev.time_range.start_time) + " - " + str(ev.time_range.end_time),
                     event_date=""
@@ -213,8 +211,7 @@ class CalendarDayToday(ButtonBehavior, BoxLayout):
                                     size_hint_y=None, halign='left')) 
         if len(events) == 0:
             layout.add_widget(EventItem(
-                event_type='No Events Today! Enjoy your day off!',
-                event_name="",
+                event_name="No Events Today! Enjoy your day off",
                 event_time="",
                 event_date=""
             ))
@@ -223,7 +220,6 @@ class CalendarDayToday(ButtonBehavior, BoxLayout):
                 if i > 0:
                     layout.add_widget(Widget(size_hint_y=None, height=1))
                 edit_event = EditEventItem(
-                    event_type='Lecture',
                     event_name=ev.name,
                     event_time=str(ev.time_range.start_time) + " - " + str(ev.time_range.end_time),
                     event_date=""
@@ -238,13 +234,11 @@ class CalendarDayToday(ButtonBehavior, BoxLayout):
 
 
 class EventItem(BoxLayout):
-    event_type = StringProperty("")
     event_name = StringProperty("")
     event_time = StringProperty("")
     event_date = StringProperty("")
 
 class EditEventItem(BoxLayout):
-    event_type = StringProperty("")
     event_name = StringProperty("")
     event_time = StringProperty("")
     event_date = StringProperty("")

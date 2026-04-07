@@ -159,8 +159,7 @@ class Home(Screen):
         box.clear_widgets()
         if len(events) == 0:
             box.add_widget(EventItem(
-                event_type='No Events Today! Enjoy your day off!',
-                event_name="",
+                event_name="No Events Today! Enjoy your day off!",
                 event_time="",
                 event_date=""
             ))
@@ -169,7 +168,6 @@ class Home(Screen):
                 if i > 0:
                     box.add_widget(Widget(size_hint_y=None, height=1))
                 edit_event = EditEventItem(
-                    event_type='Lecture',
                     event_name=ev.name,
                     event_time=str(ev.time_range.start_time) + " - " + str(ev.time_range.end_time),
                     event_date=""
@@ -267,15 +265,13 @@ class Home(Screen):
         result = user_schedule.search_events(search_event)
         if result is None:
             layout.add_widget(EventItem(
-                event_type='No events found!',
-                event_name="",
+                event_name="No events found!",
                 event_time="",
                 event_date=""
             ))
         else:
             ev, g_idx, e_idx = result  # unpack the tuple
             edit_event = EditEventItem(
-                event_type='Lecture',
                 event_name=ev.name,
                 event_time=str(ev.time_range.start_time) + " - " + str(ev.time_range.end_time),
                 event_date=""
