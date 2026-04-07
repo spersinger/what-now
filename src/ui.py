@@ -105,6 +105,7 @@ class CalendarDayCell(ButtonBehavior, BoxLayout):
                 color=(0, 0, 0, 1),
                 shorten=True,
                 shorten_from="right",   # adds "..." at end
+                font_size="11sp",
             )
             label.bind(size=label.setter("text_size"))  # ensures proper alignment
 
@@ -188,6 +189,7 @@ class CalendarDayToday(ButtonBehavior, BoxLayout):
                 color=(0, 0, 0, 1),
                 shorten=True,
                 shorten_from="right",   # adds "..." at end
+                font_size="11sp",
             )
             label.bind(size=label.setter("text_size"))  # ensures proper alignment
 
