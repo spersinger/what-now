@@ -70,6 +70,7 @@ class CalendarDayCell(ButtonBehavior, BoxLayout):
     day_text = StringProperty("")
     day_color = ListProperty([1, 1, 1, 1])
     event_count = NumericProperty(0)
+    events = ListProperty([])
 
     def on_event_count(self, instance, value):
         self._rebuild_bars()
@@ -82,15 +83,30 @@ class CalendarDayCell(ButtonBehavior, BoxLayout):
         if bars_container is None:
             return
         bars_container.clear_widgets()
-        for _ in range(self.event_count):
-            bar = Widget(size_hint_y=None, height=4)
-            with bar.canvas:
+
+        for event in self.events:
+            bar = BoxLayout(size_hint_y=None, height=15, padding=[4, 0], spacing=6)
+
+            with bar.canvas.before:
                 Color(0.878, 0.878, 0.878, 1)
                 bar._rect = RoundedRectangle(pos=bar.pos, size=bar.size, radius=[2])
+
             bar.bind(
                 pos=lambda w, v: setattr(w._rect, "pos", v),
                 size=lambda w, v: setattr(w._rect, "size", v),
             )
+
+            label = Label(
+                text=event.name,
+                halign="left",
+                valign="middle",
+                color=(0, 0, 0, 1),
+                shorten=True,
+                shorten_from="right",   # adds "..." at end
+            )
+            label.bind(size=label.setter("text_size"))  # ensures proper alignment
+
+            bar.add_widget(label)
             bars_container.add_widget(bar)
 
     def on_press(self):
@@ -135,6 +151,7 @@ class CalendarDayCell(ButtonBehavior, BoxLayout):
 class CalendarDayToday(ButtonBehavior, BoxLayout):
     day_text = StringProperty("")
     event_count = NumericProperty(0)
+    events = ListProperty([])
 
     def on_event_count(self, instance, value):
         self._rebuild_bars()
@@ -147,15 +164,30 @@ class CalendarDayToday(ButtonBehavior, BoxLayout):
         if bars_container is None:
             return
         bars_container.clear_widgets()
-        for _ in range(self.event_count):
-            bar = Widget(size_hint_y=None, height=4)
-            with bar.canvas:
+
+        for event in self.events:
+            bar = BoxLayout(size_hint_y=None, height=15, padding=[4, 0], spacing=6)
+
+            with bar.canvas.before:
                 Color(0.878, 0.878, 0.878, 1)
                 bar._rect = RoundedRectangle(pos=bar.pos, size=bar.size, radius=[2])
+
             bar.bind(
                 pos=lambda w, v: setattr(w._rect, "pos", v),
                 size=lambda w, v: setattr(w._rect, "size", v),
             )
+
+            label = Label(
+                text=event.name,
+                halign="left",
+                valign="middle",
+                color=(0, 0, 0, 1),
+                shorten=True,
+                shorten_from="right",   # adds "..." at end
+            )
+            label.bind(size=label.setter("text_size"))  # ensures proper alignment
+
+            bar.add_widget(label)
             bars_container.add_widget(bar)
 
     def on_press(self):

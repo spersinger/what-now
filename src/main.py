@@ -74,11 +74,14 @@ class Home(Screen):
 
         for day in range(1, calendar.monthrange(year, month)[1] + 1):
             count = event_counts.get(day, 0)
+            current_date = Date(year, month, day)
+            events = user_schedule.get_for_date(current_date)
+
             if day == today:
-                cell = CalendarDayToday(day_text=str(day), event_count=count)
+                cell = CalendarDayToday(day_text=str(day), event_count=count, events=events)
             else:
                 color = [0.333, 0.333, 0.333, 1] if ... else [1, 1, 1, 1]
-                cell = CalendarDayCell(day_text=str(day), day_color=color, event_count=count)
+                cell = CalendarDayCell(day_text=str(day), day_color=color, event_count=count, events=events)
             grid.add_widget(cell)
 
     def build_events(self, events):
