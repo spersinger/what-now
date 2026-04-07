@@ -167,10 +167,12 @@ class Home(Screen):
             for i, ev in enumerate(events):
                 if i > 0:
                     box.add_widget(Widget(size_hint_y=None, height=1))
+
+                day, date = ev.date_range.start_date.strftime("%A"), ev.date_range.start_date
                 edit_event = EditEventItem(
                     event_name=ev.name,
                     event_time=str(ev.time_range.start_time) + " - " + str(ev.time_range.end_time),
-                    event_date=""
+                    event_date=f"{day} - {date}"
                 )
                 edit_event.set_event(ev)
                 box.add_widget(edit_event)
@@ -271,10 +273,11 @@ class Home(Screen):
             ))
         else:
             ev, g_idx, e_idx = result  # unpack the tuple
+            day, date = ev.date_range.start_date.strftime("%A"), ev.date_range.start_date
             edit_event = EditEventItem(
                 event_name=ev.name,
                 event_time=str(ev.time_range.start_time) + " - " + str(ev.time_range.end_time),
-                event_date=""
+                event_date=f"{day} - {date}"
             )
             edit_event.set_event(ev)
             layout.add_widget(edit_event)

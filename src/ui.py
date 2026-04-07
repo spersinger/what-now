@@ -107,6 +107,7 @@ class CalendarDayCell(ButtonBehavior, BoxLayout):
                 shorten_from="right",   # adds "..." at end
                 font_size="11sp",
             )
+
             label.bind(size=label.setter("text_size"))  # ensures proper alignment
 
             bar.add_widget(label)
@@ -114,6 +115,7 @@ class CalendarDayCell(ButtonBehavior, BoxLayout):
 
     def on_press(self):
         from globals import user_schedule, command_interpreter
+        from datetime import date
 
         print(f"Day pressed: {self.day_text}")
         root = BoxLayout(orientation='vertical', spacing=6, padding=10)
@@ -139,10 +141,11 @@ class CalendarDayCell(ButtonBehavior, BoxLayout):
             for i, ev in enumerate(events):
                 if i > 0:
                     layout.add_widget(Widget(size_hint_y=None, height=1))
+                day, date = ev.date_range.start_date.strftime("%A"), ev.date_range.start_date
                 edit_event = EditEventItem(
                     event_name=ev.name,
                     event_time=str(ev.time_range.start_time) + " - " + str(ev.time_range.end_time),
-                    event_date=""
+                    event_date=f"{day} - {date}"
                 )
                 edit_event.set_event(ev)
                 layout.add_widget(edit_event)
@@ -195,6 +198,8 @@ class CalendarDayToday(ButtonBehavior, BoxLayout):
             bars_container.add_widget(bar)
 
     def on_press(self):
+        from datetime import date
+
         print(f"Day pressed: {self.day_text}")
         root = BoxLayout(orientation='vertical', spacing=6, padding=10)
         scroll = ScrollView(size_hint=(1, 1))
@@ -219,10 +224,11 @@ class CalendarDayToday(ButtonBehavior, BoxLayout):
             for i, ev in enumerate(events):
                 if i > 0:
                     layout.add_widget(Widget(size_hint_y=None, height=1))
+                day, date = ev.date_range.start_date.strftime("%A"), ev.date_range.start_date
                 edit_event = EditEventItem(
                     event_name=ev.name,
                     event_time=str(ev.time_range.start_time) + " - " + str(ev.time_range.end_time),
-                    event_date=""
+                    event_date=f"{day} - {date}"
                 )
                 edit_event.set_event(ev)
                 layout.add_widget(edit_event)
@@ -259,8 +265,7 @@ class EditEventItem(BoxLayout):
         if self.event is None:
             return
 
-        import datetime
-        today = datetime.date.today()
+        today = date.today()
         ev = self.event
 
         def make_label(text, **kwargs):
