@@ -467,56 +467,114 @@ class Voice(Screen):
             text = inputs["type"].text.strip().upper()
             command.c_type = CommandType[text]
 
-        if "name" in inputs:
-            command.data.name = inputs["name"].text
+        if command.c_type.name == "EDIT":
+            #all this data goes to the second event of
+            #the tuple, the edit_event (NOT search_event)
+            if "name" in inputs:
+                command.data[1].name = inputs["name"].text
 
-        if "desc" in inputs:
-            command.data.description = inputs["desc"].text
+            if "desc" in inputs:
+                command.data[1].description = inputs["desc"].text
 
-        if "notif" in inputs:
-            text = inputs["notif"].text
-            #split the string into a list
-            notif_list = [n.strip() for n in text.split(",") if n.strip()]
-            # parse notification list
-            command.data.notif_times = command_interpreter.parse_notifications(notif_list)
+            if "notif" in inputs:
+                text = inputs["notif"].text
+                # split the string into a list
+                notif_list = [n.strip() for n in text.split(",") if n.strip()]
+                # parse notification list
+                command.data[1].notif_times = command_interpreter.parse_notifications(notif_list)
 
-        if "date" in inputs:
-            text = inputs["date"].text
-            if "->" in text:
-                start_str, end_str = text.split("->")
-                start_str = start_str.strip()
-                end_str = end_str.strip()
-            else:
-                # single date
-                start_str = end_str = text.strip()
+            if "date" in inputs:
+                text = inputs["date"].text
+                if "->" in text:
+                    start_str, end_str = text.split("->")
+                    start_str = start_str.strip()
+                    end_str = end_str.strip()
+                else:
+                    # single date
+                    start_str = end_str = text.strip()
 
-            # create date range and put it in data
-            start_date = command_interpreter.parse_date(start_str, command.c_type)
-            end_date = command_interpreter.parse_date(end_str, command.c_type)
-            command.data.date_range = CalendarEvent.DateRange(start_date,end_date)
+                # create date range and put it in data
+                start_date = command_interpreter.parse_date(start_str, command.c_type)
+                end_date = command_interpreter.parse_date(end_str, command.c_type)
+                command.data[1].date_range = CalendarEvent.DateRange(start_date, end_date)
+
+            if "time" in inputs:
+                text = inputs["time"].text
+                parts = [p.strip() for p in re.split(r'\s*->\s*', text)]
+
+                if len(parts) == 2:
+                    start_t, end_t = parts
+                else:
+                    start_t = parts[0]
+                    end_t = None
+
+                # create time range and put it in data
+                command.data[1].time_range = command_interpreter.parse_time(start_t, end_t)
+
+            if "repeat" in inputs:
+                text = inputs["repeat"].text
+
+                repeat_dict = self.text_to_repeat_dict(text)
+
+                command.data[1].repeat = command_interpreter.parse_repeat(repeat_dict, command.data.date_range.start_date,command.data.date_range.end_date)
+
+            user_schedule.perform_command(command)
+
+        elif command.c_type.name == "ADD" or command.c_type.name == "DELETE":
+            if "name" in inputs:
+                command.data.name = inputs["name"].text
+
+            if "desc" in inputs:
+                command.data.description = inputs["desc"].text
+
+            if "notif" in inputs:
+                text = inputs["notif"].text
+                #split the string into a list
+                notif_list = [n.strip() for n in text.split(",") if n.strip()]
+                # parse notification list
+                command.data.notif_times = command_interpreter.parse_notifications(notif_list)
+
+            if "date" in inputs:
+                text = inputs["date"].text
+                if "->" in text:
+                    start_str, end_str = text.split("->")
+                    start_str = start_str.strip()
+                    end_str = end_str.strip()
+                else:
+                    # single date
+                    start_str = end_str = text.strip()
+
+                # create date range and put it in data
+                start_date = command_interpreter.parse_date(start_str, command.c_type)
+                end_date = command_interpreter.parse_date(end_str, command.c_type)
+                command.data.date_range = CalendarEvent.DateRange(start_date,end_date)
 
 
-        if "time" in inputs:
-            text = inputs["time"].text
-            parts = [p.strip() for p in re.split(r'\s*->\s*', text)]
+            if "time" in inputs:
+                text = inputs["time"].text
+                parts = [p.strip() for p in re.split(r'\s*->\s*', text)]
 
-            if len(parts) == 2:
-                start_t, end_t = parts
-            else:
-                start_t = parts[0]
-                end_t = None
+                if len(parts) == 2:
+                    start_t, end_t = parts
+                else:
+                    start_t = parts[0]
+                    end_t = None
 
-            # create time range and put it in data
-            command.data.time_range = command_interpreter.parse_time(start_t,end_t)
+                # create time range and put it in data
+                command.data.time_range = command_interpreter.parse_time(start_t,end_t)
 
-        if "repeat" in inputs:
-            text = inputs["repeat"].text
+            if "repeat" in inputs:
+                text = inputs["repeat"].text
 
-            repeat_dict = self.text_to_repeat_dict(text)
+                repeat_dict = self.text_to_repeat_dict(text)
 
-            command.data.repeat = command_interpreter.parse_repeat(repeat_dict,command.data.date_range.start_date,command.data.date_range.end_date)
+                command.data.repeat = command_interpreter.parse_repeat(repeat_dict,command.data.date_range.start_date,command.data.date_range.end_date)
 
-        user_schedule.perform_command(command)
+            user_schedule.perform_command(command)
+
+        #TODO:error handling for non-valid command:
+        else:
+            pass
 
         self.current_command_index += 1
         self.show_next_command()  # Show the next command
