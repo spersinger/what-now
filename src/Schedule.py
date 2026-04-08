@@ -115,28 +115,8 @@ class Schedule():
                             RepeatDuration(d_type,d_times)
                         )
 
-                ''' custom repeat and notifs -- trying to get rid of
-                # THE NEW AND (HOPEFULLY) IMPROVED REPEAT IS ABOVE
-                THE NEW NOTIFS ARE BELOW THIS COMMENTED OUT SECTION
-                custom = component.get('WN-REPEAT')
-                if custom:
-                    data = json.loads(str(custom))
-
-                    #days needs to be a set or None
-                    days_data = data["days"]
-                    if days_data is None:
-                        days = None
-                    else:
-                        days = set(days_data)
-
-                    repeat = Repeat(
-                        RepeatCycle(data["timespan"], days),
-                        RepeatDuration(data["duration_type"], data["duration_value"])
-                    )
-                else:
-                    repeat = None
+                ''' custom notifs -- trying to get rid of
                 
-            
                 # notifications
                 notif_times = []
                 custom_notifs = component.get('WN-NOTIFS')
@@ -267,18 +247,7 @@ class Schedule():
                             rrule["until"] =datetime.combine(duration.value, datetime.min.time())
 
                 event.add('rrule', rrule)
-                '''
-                # THIS IS INCASE THE OTHER REPEAT DOESNT WORK
-                # BUT IT LOOKS LIKE IT DOES TO ME
-                repeat_data = {
-                    "timespan": cycle.timespan.name.lower(),  # "day", "week", etc.
-                    "days": [self.day_mapping(d) for d in cycle.days] if cycle.days else None,
-                    "duration_type": e.repeat.duration.dur_type.name.lower(),
-                    "duration_value": e.repeat.duration.value
-                }
 
-                event.add('WN-REPEAT', json.dumps(repeat_data))
-                '''
 
             # compatible notifications
             if e.notif_times:
