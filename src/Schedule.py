@@ -65,32 +65,46 @@ class Schedule():
                     d_times = None
 
                     # for cycle
-                    if frequency == "daily":
+                    if frequency == "DAILY":
                         r_timespan = "day"
-                        r_days = "umtwrfs"
-                    elif frequency == "weekly":
+                        r_days = {  # set of Day enums
+                            Day.MONDAY,
+                            Day.TUESDAY,
+                            Day.WEDNESDAY,
+                            Day.THURSDAY,
+                            Day.FRIDAY,
+                            Day.SATURDAY,
+                            Day.SUNDAY
+                        }
+                    elif frequency == "WEEKLY":
                         r_timespan = "week"
-                        r_days = [self.day_mapping_reverse(d) for d in data["BYDAY"]] if data["BYDAY"] else None
-                    elif frequency == "monthly":
+                        r_days = set(self.day_mapping_reverse(d) for d in data["BYDAY"])
+                    elif frequency == "MONTHLY":
                         r_timespan = "month"
                         r_date = data["BYMONTHDAY"]
                         #set a date just this month on certain day
                         # is good because it should only use the day # I believe?
-                        r_days = datetime(year = today.year, month = today.month, day = r_date)
-                    elif frequency == "yearly":
+                        r_days = {date(year = today.year, month = today.month, day = int(r_date))}
+                    elif frequency == "YEARLY":
                         r_timespan = "year"
                         r_date = data["BYMONTHDAY"]
                         r_month = data["BYMONTH"]
 
-                        r_days = datetime(year = today.year, month = r_month, day = r_date)
+                        r_days = {date(year = today.year, month = int(r_month), day = int(r_date))}
 
                     # for duration
                     if data.get('COUNT', [None])[0]:
+
                         d_type = "times"
-                        d_times = data.get('COUNT')[0]
+                        d_times =int( data.get('COUNT')[0])
+
                     elif data.get('UNTIL',[None])[0]:
                         d_type = 'until'
-                        d_times =  data.get('UNTIL')
+                        until_dt =  data.get('UNTIL')[0]
+                        if isinstance(until_dt, datetime):
+                            d_times = until_dt.date()  # convert to date
+                        else:
+                            d_times = until_dt  # if it’s already a date
 
                     # if all needed variables exist - make the repeat
                     # if an incoming icalendar file does not have the
@@ -178,16 +192,13 @@ class Schedule():
                     times=time_range,
                     repeat=repeat
                 )
-                events.append(event)
 
-        self.events = [[e] for e in events]
+                self.add_event(event)
+        #self.events = [[e] for e in events]
 
         return True
 
-    # TODO: when uploading the icalendar file to outlook,
-    # each recurring event shows up n times
-    # (for second occurence it has 2 events, third it has 3 etc.)
-    # function saves events to .ics file
+
     def save_to_ics(self,events, filename="user_schedule.ics"):
         # cal used for the Calendar inside ics file
         cal = Calendar()
@@ -331,19 +342,19 @@ class Schedule():
 
     def day_mapping_reverse(self,d: str) -> Day:
         match d:
-            case 'm':
+            case 'MO':
                 return Day.MONDAY
-            case 't':
+            case 'TU':
                 return Day.TUESDAY
-            case 'w':
+            case 'WE':
                 return Day.WEDNESDAY
-            case 'r':
+            case 'TH':
                 return Day.THURSDAY
-            case 'f':
+            case 'FR':
                 return Day.FRIDAY
-            case 's':
+            case 'SA':
                 return Day.SATURDAY
-            case 'u':
+            case 'SU':
                 return Day.SUNDAY
 
     # TODO: Do we want to use this to auto save the schedule?
@@ -587,5 +598,13 @@ class Schedule():
         for group in self.events:
             all_events.extend(group)
         return all_events
+
+    def get_first_events(self) -> List[CalendarEvent]:
+        """Return only one event per group (the first), for saving/exporting."""
+        first_events = []
+        for group in self.events:
+            if group:  # make sure group is not empty
+                first_events.append(group[0])  # first event in the group is the master
+        return first_events
     
 # TODO: try/except with error propogation instead of None/assert usage? (everywehre, not just this file)

@@ -493,6 +493,7 @@ class CalendarEvent():
                         day = Day((event_start + delta_day).weekday())
                     return event_start + delta_day
 
+
                 case TimeType.MONTH: # specific days per month
                     # return the smallest date after the current
                     later_dates = {
