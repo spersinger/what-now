@@ -8,6 +8,7 @@ import json
 import icalendar
 from icalendar import Calendar, Event
 from datetime import datetime
+from datetime import date
 from datetime import time
 # contains all of a user's events
 # purpose: manage calendar events
@@ -51,6 +52,56 @@ class Schedule():
                     Time(end.hour, end.minute)
                 )
 
+                #repeat
+                repeat_rule = component.get('rrule')
+                repeat = None
+                if repeat_rule:
+                    data = dict(repeat_rule)
+                    frequency = data["FREQ"][0]
+                    today = datetime.now()
+                    r_timespan = None
+                    r_days = None
+                    d_type = None
+                    d_times = None
+
+                    # for cycle
+                    if frequency == "daily":
+                        r_timespan = "day"
+                        r_days = "umtwrfs"
+                    elif frequency == "weekly":
+                        r_timespan = "week"
+                        r_days = [self.day_mapping_reverse(d) for d in data["BYDAY"]] if data["BYDAY"] else None
+                    elif frequency == "monthly":
+                        r_timespan = "month"
+                        r_date = data["BYMONTHDAY"]
+                        #set a date just this month on certain day
+                        # is good because it should only use the day # I believe?
+                        r_days = datetime(year = today.year, month = today.month, day = r_date)
+                    elif frequency == "yearly":
+                        r_timespan = "year"
+                        r_date = data["BYMONTHDAY"]
+                        r_month = data["BYMONTH"]
+
+                        r_days = datetime(year = today.year, month = r_month, day = r_date)
+
+                    # for duration
+                    if data.get('COUNT', [None])[0]:
+                        d_type = "times"
+                        d_times = data.get('COUNT')[0]
+                    elif data.get('UNTIL',[None])[0]:
+                        d_type = 'until'
+                        d_times =  data.get('UNTIL')
+
+                    # if all needed variables exist - make the repeat
+                    # if an incoming icalendar file does not have the
+                    # appropriate rrule data, we will not use it
+                    if r_timespan and r_days and d_type and d_times:
+                        repeat = Repeat(
+                            RepeatCycle(r_timespan, r_days),
+                            RepeatDuration(d_type,d_times)
+                        )
+
+                ''' custom repeat -- trying to get rid of
                 # repeat
                 custom = component.get('WN-REPEAT')
                 if custom:
@@ -69,7 +120,7 @@ class Schedule():
                     )
                 else:
                     repeat = None
-
+                '''
                 # notifications
                 notif_times = []
                 custom_notifs = component.get('WN-NOTIFS')
@@ -121,13 +172,12 @@ class Schedule():
             event.add('dtstart', start_dt)
             event.add('dtend', end_dt)
 
-            # basic repeat in file for compatibility
+            # repeat in file for compatibility
             if e.repeat and e.repeat.cycle:
                 cycle = e.repeat.cycle
 
-                #rrule is only for compatibility
-                #is not used when loading the events for us
                 rrule = {}
+
                 if cycle.timespan == TimeType.DAY:
                     rrule['freq'] = 'daily'
                 elif cycle.timespan == TimeType.WEEK:
@@ -138,11 +188,34 @@ class Schedule():
 
                 elif cycle.timespan == TimeType.MONTH:
                     rrule['freq'] = 'monthly'
+                    if cycle.days:
+                        # gets the day (ex. 21) to repeat on the 21st of each month
+                        rrule["bymonthday"] = cycle.days.day
                 elif cycle.timespan == TimeType.YEAR:
                     rrule['freq'] = 'yearly'
+                    if cycle.days:
+                        #get month and day value
+                        rrule["bymonth"] = cycle.days.month
+                        rrule["bymonthday"] = cycle.days.day
+                
+                #duration
+
+                if e.repeat.duration:
+                    duration = e.repeat.duration
+                     # If num_times or forever use count for #
+                    # when we load in a "forever" repeat we will just make it
+                    # num_times and 500.
+                    if duration.dur_type == DurationType.NUM_TIMES or duration.dur_type == DurationType.FOREVER:
+                        if isinstance(duration.value, int):
+                            rrule["count"] = duration.value
+                     # if until, place the date into the until
+                    if duration.dur_type == DurationType.UNTIL_DATE:
+                        if isinstance(duration.value, date):
+                            dur_val = duration.value
+                            rrule["until"] =datetime.combine(duration.value, datetime.min.time())
 
                 event.add('rrule', rrule)
-
+                '''
                 #the real value to place our entire repeat value
                 repeat_data = {
                     "timespan": cycle.timespan.name.lower(),  # "day", "week", etc.
@@ -152,7 +225,7 @@ class Schedule():
                 }
 
                 event.add('WN-REPEAT', json.dumps(repeat_data))
-
+                '''
             #TODO: save compatible notif times,like we do for repeat
             # that we will not use
 
@@ -190,6 +263,23 @@ class Schedule():
                 return 's'
             case Day.SUNDAY:
                 return 'u'
+
+    def day_mapping_reverse(self,d: str) -> Day:
+        match d:
+            case 'm':
+                return Day.MONDAY
+            case 't':
+                return Day.TUESDAY
+            case 'w':
+                return Day.WEDNESDAY
+            case 'r':
+                return Day.THURSDAY
+            case 'f':
+                return Day.FRIDAY
+            case 's':
+                return Day.SATURDAY
+            case 'u':
+                return Day.SUNDAY
 
     # TODO: Do we want to use this to auto save the schedule?
     def __cleanup__(self): pass
