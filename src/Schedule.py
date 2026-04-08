@@ -6,7 +6,7 @@ from difflib import SequenceMatcher
 import calendar
 import json
 import icalendar
-from icalendar import Calendar, Event
+from icalendar import Calendar, Event, Alarm
 from datetime import datetime
 from datetime import date
 from datetime import time
@@ -101,8 +101,9 @@ class Schedule():
                             RepeatDuration(d_type,d_times)
                         )
 
-                ''' custom repeat -- trying to get rid of
-                # repeat
+                ''' custom repeat and notifs -- trying to get rid of
+                # THE NEW AND (HOPEFULLY) IMPROVED REPEAT IS ABOVE
+                THE NEW NOTIFS ARE BELOW THIS COMMENTED OUT SECTION
                 custom = component.get('WN-REPEAT')
                 if custom:
                     data = json.loads(str(custom))
@@ -120,7 +121,8 @@ class Schedule():
                     )
                 else:
                     repeat = None
-                '''
+                
+            
                 # notifications
                 notif_times = []
                 custom_notifs = component.get('WN-NOTIFS')
@@ -130,6 +132,43 @@ class Schedule():
                     for n in data:
                         notif = NotifTime(n["num"],TimeType[n["type"]])
                         notif_times.append(notif)
+                '''
+                #for notifications we need to loop over all subcomponents.
+                # find each "VALARM" and convert it to our notifications
+                notif_times = []
+                for c in component.subcomponents:
+                    if c.name == "VALARM":
+                        trigger_str = c.get("TRIGGER")
+
+                        if trigger_str.startswith("-PT"):
+                            #grab the number - between T and the timetype
+                            num = int(trigger_str[3:-1])
+                        elif trigger_str.startswith("-P"):
+                            # number is between P and timetype
+                            num = int(trigger_str[2:-1])
+                        else:
+                            num = None
+
+
+                        time_letter = trigger_str[-1]
+                        time_type = None
+                        match (time_letter):
+                            case "M":
+                                time_type = TimeType.MINUTE
+
+                            case "H":
+                                time_type = TimeType.HOUR
+
+                            case "D":
+                                time_type = TimeType.DAY
+
+                            case "W":
+                                time_type = TimeType.WEEK
+
+
+                        if num is not None and time_type is not None:
+                            notif = NotifTime(num, time_type)
+                            notif_times.append(notif)
 
                 event = CalendarEvent(
                     name=name,
@@ -145,7 +184,9 @@ class Schedule():
 
         return True
 
-
+    # TODO: when uploading the icalendar file to outlook,
+    # each recurring event shows up n times
+    # (for second occurence it has 2 events, third it has 3 etc.)
     # function saves events to .ics file
     def save_to_ics(self,events, filename="user_schedule.ics"):
         # cal used for the Calendar inside ics file
@@ -172,7 +213,7 @@ class Schedule():
             event.add('dtstart', start_dt)
             event.add('dtend', end_dt)
 
-            # repeat in file for compatibility
+            # compatible repeat
             if e.repeat and e.repeat.cycle:
                 cycle = e.repeat.cycle
 
@@ -216,7 +257,8 @@ class Schedule():
 
                 event.add('rrule', rrule)
                 '''
-                #the real value to place our entire repeat value
+                # THIS IS INCASE THE OTHER REPEAT DOESNT WORK
+                # BUT IT LOOKS LIKE IT DOES TO ME
                 repeat_data = {
                     "timespan": cycle.timespan.name.lower(),  # "day", "week", etc.
                     "days": [self.day_mapping(d) for d in cycle.days] if cycle.days else None,
@@ -226,11 +268,34 @@ class Schedule():
 
                 event.add('WN-REPEAT', json.dumps(repeat_data))
                 '''
-            #TODO: save compatible notif times,like we do for repeat
-            # that we will not use
 
-            ## notifications - for our use
-            # DO NOT KNOW IF THIS IS CORRECT, NEED TO MERGE TO BE ABLE TO TEST
+            # compatible notifications
+            if e.notif_times:
+
+                #grab each notification for the event
+                for n in e.notif_times:
+                    num = n.num_timespans
+                    # only need the first letter for time type
+                    type = n.timespan_type.name[0]
+
+                    # if Minute or Hour we need to use PT (Period Time),
+                    # otherwise just P will work
+                    if type == "M" or type == "H" :
+                        trigger = f"-PT{num}{type}"
+                    else:
+                        trigger = f"-P{num}{type}"
+
+                    #for each notif time create an alarm ICAL property
+                    # can't store multiple notifs in one alarm
+                    alarm = Alarm()
+                    alarm.add('action', 'DISPLAY')
+                    alarm.add('trigger', trigger)
+
+                    event.add_component(alarm)
+
+            '''
+            # THIS IS OLD, ONLY KEEPING IT FOR NOW IN CASE NEW NOTIF
+            # (COMPATIBLE VERSION) DOESNT WORK
             if e.notif_times:
 
                 notif_data = []
@@ -241,7 +306,7 @@ class Schedule():
                     })
 
                 event.add('WN-NOTIFS', json.dumps(notif_data))
-
+            '''
             cal.add_component(event)
 
         with open(filename, 'wb') as f:
