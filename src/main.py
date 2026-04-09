@@ -539,6 +539,18 @@ class NavButton(Button):
 
 class Root(BoxLayout):
 
+    def on_size(self, *args):
+        self.clear_widgets()
+
+        if self.width >= 800:
+            # Desktop: nav on left
+            self.add_widget(self.ids.nav_bar)
+            self.add_widget(self.ids.sm)
+        else:
+            # Mobile: nav on bottom
+            self.add_widget(self.ids.sm)
+            self.add_widget(self.ids.nav_bar)
+
     def set_active(self, screen_name):
         sm = self.ids.sm
 
