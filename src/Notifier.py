@@ -1,23 +1,20 @@
 import asyncio
-import threading
+import sys
 from desktop_notifier import DesktopNotifier, Icon
 from pathlib import Path
+from kivy.clock import Clock
 
 class Notifier:
     def __init__(self):
         cwd = Path.cwd()
         self.icon = Icon(path=cwd.joinpath("assets", "whatnow.png"))
         self.notifier = DesktopNotifier(app_name="What Now?", app_icon=self.icon)
-        self.loop = asyncio.new_event_loop()
-        threading.Thread(target=self._start_loop, daemon=True).start()
-
-    def _start_loop(self):
-        asyncio.set_event_loop(self.loop)
-        self.loop.run_forever()
 
     def send(self, title, message):
-        # Schedule coroutine in the dedicated loop
-        asyncio.run_coroutine_threadsafe(
-            self.notifier.send(title=title, message=message),
-            self.loop
+        # Schedule on Kivy's main thread, safe for WinRT on Windows
+        Clock.schedule_once(lambda dt: self._send(title, message), 0.1)
+
+    def _send(self, title, message):
+        asyncio.ensure_future(
+            self.notifier.send(title=title, message=message)
         )

@@ -18,6 +18,7 @@ from kivy.core.window import Window
 from kivy.lang import Builder
 from kivy.config import Config
 from kivy.clock  import Clock
+import asyncio
 
 import calendar
 import datetime
@@ -521,6 +522,9 @@ class Home(Screen):
         btn.bind(on_release=on_submit)
         popup.open()
 
+    def on_enter(self):
+        Clock.schedule_once(lambda dt: self.refresh(), 0.1)
+
 class Voice(Screen): pass
 
 class Scanner(Screen):
@@ -584,4 +588,5 @@ class WhatNow(App):
 
 
 if __name__ == "__main__":
-    WhatNow().run()
+    asyncio.run(WhatNow().async_run(async_lib='asyncio'))
+    #WhatNow().run()
