@@ -1,5 +1,10 @@
 from kivy.app import App
 from kivy.uix.screenmanager import ScreenManager, Screen
+
+# should be run before sr imported
+# cwd: /data/data/org.test.test2/files/app (visible to app)
+# trying to access /data/user/0/org.test.test2/files/app (not allowed) maybe?
+
 import speech_recognition as sr
 import threading
 from kivy.clock import Clock
