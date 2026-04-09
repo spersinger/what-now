@@ -46,22 +46,28 @@
             id: home_button
             text: "[b]Home[/b]"
             screen_name: "home"
+            #uses screen_name instead of just text now
             on_release:
-                app.root.set_active("home")
+                root.set_active(self.screen_name)
+
         NavButton:
             id: voice_button
             text: "Voice"
             screen_name: "voice"
             # Set initial non active color
             color: 0.6, 0.6, 0.6, 1
+            #uses screen_name instead of just text now
             on_release:
-                app.root.set_active("voice")
+                root.set_active(self.screen_name)
+
         NavButton:
             id: scanner_button
             text: "Scanner"
             screen_name: "scanner"
             # Set initial non active color
             color: 0.6, 0.6, 0.6, 1
+            #uses screen_name instead of just text now
             on_release:
-                app.root.set_active("scanner")
+                root.set_active(self.screen_name)
+
 

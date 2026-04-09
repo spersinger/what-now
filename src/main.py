@@ -1,4 +1,3 @@
-
 try:
     from kivy.app import App
 except ModuleNotFoundError:
@@ -10,6 +9,8 @@ from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.widget import Widget
 from kivy.uix.textinput import TextInput
+from kivy.properties import StringProperty
+from kivy.uix.button import Button
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.gridlayout import GridLayout
 from datetime import date as dt_date
@@ -17,6 +18,7 @@ from datetime import date as dt_date
 from kivy.core.window import Window
 from kivy.lang import Builder
 from kivy.config import Config
+from kivy.clock  import Clock
 
 import icalendar
 from icalendar import Calendar, Event
@@ -26,8 +28,8 @@ import json
 
 
 import calendar
+import datetime
 from datetime import date
-
 Builder.load_file('../ui/themed.kv')
 Builder.load_file('../ui/home_page.kv')
 Builder.load_file('../ui/voice_page.kv')
@@ -50,30 +52,101 @@ from Voice import Voice
 from document_scanner import DocumentScanner
 from ui import *
 from globals import user_schedule, command_interpreter
+from kivy.uix.camera import Camera
+from kivy.clock import Clock
+
 
 import calendar
 
 # TODO: Move to seperate file
 class Home(Screen):
+    view_type = "month"
+
     def add_event(self, event: CalendarEvent):
         user_schedule.add_event(event)
         self.refresh()
 
     def refresh(self):
         today = date.today()
-        self.build_calendar(today.year, today.month)
+        if self.view_type == "month":
+            self.build_calendar(today.year, today.month)
+        else:
+            self.build_week_calendar()
+
         self.build_events(user_schedule.get_for_date(date.today()))
+
+    def toggle_view(self):
+        if self.view_type == "month":
+            self.view_type = "week"
+            self.ids.change_view_type_button.text = "[b]Month View[/b]"
+            self.build_week_calendar()
+        else:
+            self.view_type = "month"
+            self.ids.change_view_type_button.text = "[b]Week View[/b]"
+            today = date.today()
+            self.build_calendar(today.year, today.month)
+
+    def build_week_calendar(self):
+        from datetime import timedelta
+        grid = self.ids.calendar_grid
+        grid.clear_widgets()
+
+        today = date.today()
+
+        # If weekend (Sat=5, Sun=6), show next week; otherwise show current week
+        weekday = today.weekday()  # Mon=0 ... Sun=6
+        if weekday >= 5:
+            # Jump to next Monday
+            days_until_monday = 7 - weekday
+            week_start = today + timedelta(days=days_until_monday)
+        else:
+            # Start of current week (Monday)
+            week_start = today - timedelta(days=weekday)
+
+        week_days = [week_start + timedelta(days=i) for i in range(7)]
+
+        # Day-of-week headers
+        day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        for name in day_names:
+            grid.add_widget(Label(
+                text=name,
+                size_hint_y=None,
+                height=20,
+                font_size='11sp',
+                color=(0.6, 0.6, 0.6, 1)
+            ))
+
+        # Day cells
+        event_counts = {}
+        for d in week_days:
+            events = user_schedule.get_for_date(d)
+            event_counts[d.day] = len(events)
+
+        for d in week_days:
+            count = event_counts.get(d.day, 0)
+            if d == today:
+                cell = CalendarDayToday(day_text=str(d.day), event_count=count)
+            else:
+                color = [1, 1, 1, 1]
+                cell = CalendarDayCell(day_text=str(d.day), day_color=color, event_count=count)
+            grid.add_widget(cell)
+
+        # Show events for the whole week in the events box
+        all_events = []
+        for d in week_days:
+            all_events.extend(user_schedule.get_for_date(d))
+        self.build_events(all_events)
 
     def build_calendar(self, year, month):
         grid = self.ids.calendar_grid
         grid.clear_widgets()
-        today = date.today().day
+        today = datetime.date.today().day
         first_weekday = calendar.monthrange(year, month)[0]
         start_offset = (first_weekday + 1) % 7
         for _ in range(start_offset):
             grid.add_widget(Widget(size_hint_y=None, height=30))
 
-        event_counts = user_schedule.get_event_counts(year, month)  # dict: {day: count}
+        event_counts = user_schedule.get_event_counts(year, month)
 
         for day in range(1, calendar.monthrange(year, month)[1] + 1):
             count = event_counts.get(day, 0)
@@ -98,12 +171,14 @@ class Home(Screen):
             for i, ev in enumerate(events):
                 if i > 0:
                     box.add_widget(Widget(size_hint_y=None, height=1))
-                box.add_widget(EditEventItem(
+                edit_event = EditEventItem(
                     event_type='Lecture',
                     event_name=ev.name,
                     event_time=str(ev.time_range.start_time) + " - " + str(ev.time_range.end_time),
                     event_date=""
-                ))
+                )
+                edit_event.set_event(ev)
+                box.add_widget(edit_event)
 
     def on_kv_post(self, base_widget):
         # refresh screen to get loaded events
@@ -115,6 +190,28 @@ class Home(Screen):
         add_event_btn.bind(on_release=lambda *a: self.add_event_popup())
         save_btn = self.ids.save_button
         save_btn.bind(on_release=lambda *a: self.save_current_schedule())
+        change_view_type_btn = self.ids.change_view_type_button
+        change_view_type_btn.bind(on_release=lambda *a: self.toggle_view())
+
+        user_schedule.notify_daily()
+        # Schedule notifications for today
+        user_schedule.setup_notification_callbacks()
+
+        # Every 24 hours
+        now = datetime.datetime.now()
+        midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        seconds_until_midnight = ((midnight - now).seconds + 86400) % 86400
+
+        # Schedule notifications at next midnight so we don't miss any
+        Clock.schedule_once(
+            lambda *a: (
+                user_schedule.setup_notification_callbacks(),
+                # Then schedule at next midnight
+                Clock.schedule_interval(lambda *a: user_schedule.setup_notification_callbacks(), 86400)
+            ),
+            seconds_until_midnight
+        )
+
     def search_event_popup(self):
         '''
         Popup to create and add a new CalendarEvent.
@@ -134,7 +231,7 @@ class Home(Screen):
         search_bar = BoxLayout(orientation='horizontal', spacing=6, padding=10)
         name_input = TextInput(hint_text="e.g. Intro to Computing",
                                multiline=False, size_hint_y=None, height=40)
-        search_button = PrimaryButton(text="Search", size_hint_x=0.15, 
+        search_button = PrimaryButton(text="Search", size_hint_x=0.15,
                                       size_hint_y=None, height=44)
 
         root.add_widget(Label(text="Event Name *", size_hint_y=None, height=28,
@@ -153,7 +250,7 @@ class Home(Screen):
                 name= search_term,
                 desc= None,
                 notifs= None,
-                dates= DateRange(date.today(), date.today()),
+                dates= DateRange(datetime.date.today(), datetime.date.today()),
                 times= None,
                 repeat= None,
                 )
@@ -167,12 +264,15 @@ class Home(Screen):
             ))
         else:
             ev, g_idx, e_idx = result  # unpack the tuple
-            layout.add_widget(EditEventItem(
+            edit_event = EditEventItem(
                 event_type='Lecture',
                 event_name=ev.name,
                 event_time=str(ev.time_range.start_time) + " - " + str(ev.time_range.end_time),
                 event_date=""
-            ))
+            )
+            edit_event.set_event(ev)
+            layout.add_widget(edit_event)
+
 
     def save_current_schedule(self):
         events = user_schedule.get_first_events()  # flatten all event groups
@@ -200,7 +300,7 @@ class Home(Screen):
         - Toggle buttons for repeat frequency / end
         '''
 
-        today = dt_date.today()
+        today = datetime.date.today()
 
         # Helpers
 
@@ -249,7 +349,7 @@ class Home(Screen):
             date_row.add_widget(sp)
         layout.add_widget(date_row)
 
-        # Time pickers 
+        # Time pickers
         hours   = [str(h) for h in range(1, 13)]
         minutes = [f"{m:02d}" for m in range(0, 60, 5)]
         ampm    = ["AM", "PM"]
@@ -420,13 +520,13 @@ class Home(Screen):
             self.add_event(CalendarEvent(
                 name=name,
                 desc=desc_input.text.strip() or None,
-                notifs=None,
+                notifs=[NotifTime(15)],
                 dates=DateRange(date_str),
                 times=TimeRange(time_start, time_end),
                 repeat=repeat
             ))
             popup.dismiss()
-        
+
         btn.bind(on_release=on_submit)
         popup.open()
 
@@ -443,10 +543,21 @@ class Scanner(Screen):
         self.ids.cam_view.ids.camera.play = False
 
 class Edit(Screen): pass
+
+#Helps kivy manage screen_name correctly
+#part of fixing the problem in root
+class NavButton(Button):
+    screen_name =StringProperty("")
+
 class Root(BoxLayout):
+
     def set_active(self, screen_name):
         sm = self.ids.sm
+
         sm.current = screen_name
+
+        for btn_id in ("home_button", "voice_button", "scanner_button"):
+            btn = self.ids[btn_id]
 
         for btn_id, name in (
             ("home_button", "Home"),
@@ -465,8 +576,8 @@ class Root(BoxLayout):
 class WhatNow(App):
     def build(self):
         self.title = "What Now?"
-        # string for voice input to be used by command interpreter
-        self.voice_input = ""
+
+
         return Root()
 
 
