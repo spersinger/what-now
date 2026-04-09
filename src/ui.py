@@ -72,6 +72,7 @@ class CalendarDayCell(ButtonBehavior, BoxLayout):
     day_text = StringProperty("")
     day_color = ListProperty([1, 1, 1, 1])
     event_count = NumericProperty(0)
+    events = ListProperty([])
 
     def on_event_count(self, instance, value):
         self._rebuild_bars()
@@ -84,19 +85,37 @@ class CalendarDayCell(ButtonBehavior, BoxLayout):
         if bars_container is None:
             return
         bars_container.clear_widgets()
-        for _ in range(self.event_count):
-            bar = Widget(size_hint_y=None, height=4)
-            with bar.canvas:
+
+        for event in self.events:
+            bar = BoxLayout(size_hint_y=None, height=15, padding=[4, 0], spacing=6)
+
+            with bar.canvas.before:
                 Color(0.878, 0.878, 0.878, 1)
                 bar._rect = RoundedRectangle(pos=bar.pos, size=bar.size, radius=[2])
+
             bar.bind(
                 pos=lambda w, v: setattr(w._rect, "pos", v),
                 size=lambda w, v: setattr(w._rect, "size", v),
             )
+
+            label = Label(
+                text=event.name,
+                halign="left",
+                valign="middle",
+                color=(0, 0, 0, 1),
+                shorten=True,
+                shorten_from="right",   # adds "..." at end
+                font_size="11sp",
+            )
+
+            label.bind(size=label.setter("text_size"))  # ensures proper alignment
+
+            bar.add_widget(label)
             bars_container.add_widget(bar)
 
     def on_press(self):
         from globals import user_schedule, command_interpreter
+        from datetime import date
 
         print(f"Day pressed: {self.day_text}")
         root = BoxLayout(orientation='vertical', spacing=6, padding=10)
@@ -114,8 +133,7 @@ class CalendarDayCell(ButtonBehavior, BoxLayout):
                                     size_hint_y=None, halign='left')) 
         if len(events) == 0:
             layout.add_widget(EventItem(
-                event_type='No Events Today! Enjoy your day off!',
-                event_name="",
+                event_name="No Events Today! Enjoy your day off!",
                 event_time="",
                 event_date=""
             ))
@@ -123,11 +141,11 @@ class CalendarDayCell(ButtonBehavior, BoxLayout):
             for i, ev in enumerate(events):
                 if i > 0:
                     layout.add_widget(Widget(size_hint_y=None, height=1))
+                day, date = ev.date_range.start_date.strftime("%A"), ev.date_range.start_date
                 edit_event = EditEventItem(
-                    event_type='Lecture',
                     event_name=ev.name,
                     event_time=str(ev.time_range.start_time) + " - " + str(ev.time_range.end_time),
-                    event_date=""
+                    event_date=f"{day} - {date}"
                 )
                 edit_event.set_event(ev)
                 layout.add_widget(edit_event)
@@ -139,6 +157,7 @@ class CalendarDayCell(ButtonBehavior, BoxLayout):
 class CalendarDayToday(ButtonBehavior, BoxLayout):
     day_text = StringProperty("")
     event_count = NumericProperty(0)
+    events = ListProperty([])
 
     def on_event_count(self, instance, value):
         self._rebuild_bars()
@@ -151,18 +170,36 @@ class CalendarDayToday(ButtonBehavior, BoxLayout):
         if bars_container is None:
             return
         bars_container.clear_widgets()
-        for _ in range(self.event_count):
-            bar = Widget(size_hint_y=None, height=4)
-            with bar.canvas:
+
+        for event in self.events:
+            bar = BoxLayout(size_hint_y=None, height=15, padding=[4, 0], spacing=6)
+
+            with bar.canvas.before:
                 Color(0.878, 0.878, 0.878, 1)
                 bar._rect = RoundedRectangle(pos=bar.pos, size=bar.size, radius=[2])
+
             bar.bind(
                 pos=lambda w, v: setattr(w._rect, "pos", v),
                 size=lambda w, v: setattr(w._rect, "size", v),
             )
+
+            label = Label(
+                text=event.name,
+                halign="left",
+                valign="middle",
+                color=(0, 0, 0, 1),
+                shorten=True,
+                shorten_from="right",   # adds "..." at end
+                font_size="11sp",
+            )
+            label.bind(size=label.setter("text_size"))  # ensures proper alignment
+
+            bar.add_widget(label)
             bars_container.add_widget(bar)
 
     def on_press(self):
+        from datetime import date
+
         print(f"Day pressed: {self.day_text}")
         root = BoxLayout(orientation='vertical', spacing=6, padding=10)
         scroll = ScrollView(size_hint=(1, 1))
@@ -179,8 +216,7 @@ class CalendarDayToday(ButtonBehavior, BoxLayout):
                                     size_hint_y=None, halign='left')) 
         if len(events) == 0:
             layout.add_widget(EventItem(
-                event_type='No Events Today! Enjoy your day off!',
-                event_name="",
+                event_name="No Events Today! Enjoy your day off",
                 event_time="",
                 event_date=""
             ))
@@ -188,11 +224,11 @@ class CalendarDayToday(ButtonBehavior, BoxLayout):
             for i, ev in enumerate(events):
                 if i > 0:
                     layout.add_widget(Widget(size_hint_y=None, height=1))
+                day, date = ev.date_range.start_date.strftime("%A"), ev.date_range.start_date
                 edit_event = EditEventItem(
-                    event_type='Lecture',
                     event_name=ev.name,
                     event_time=str(ev.time_range.start_time) + " - " + str(ev.time_range.end_time),
-                    event_date=""
+                    event_date=f"{day} - {date}"
                 )
                 edit_event.set_event(ev)
                 layout.add_widget(edit_event)
@@ -204,13 +240,11 @@ class CalendarDayToday(ButtonBehavior, BoxLayout):
 
 
 class EventItem(BoxLayout):
-    event_type = StringProperty("")
     event_name = StringProperty("")
     event_time = StringProperty("")
     event_date = StringProperty("")
 
 class EditEventItem(BoxLayout):
-    event_type = StringProperty("")
     event_name = StringProperty("")
     event_time = StringProperty("")
     event_date = StringProperty("")
@@ -231,8 +265,7 @@ class EditEventItem(BoxLayout):
         if self.event is None:
             return
 
-        import datetime
-        today = datetime.date.today()
+        today = date.today()
         ev = self.event
 
         def make_label(text, **kwargs):
