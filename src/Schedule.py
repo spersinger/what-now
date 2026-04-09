@@ -139,33 +139,42 @@ class Schedule():
                 notif_times = []
                 for c in component.subcomponents:
                     if c.name == "VALARM":
-                        trigger_str = c.get("TRIGGER")
-
-                        if trigger_str.startswith("-PT"):
-                            #grab the number - between T and the timetype
-                            num = int(trigger_str[3:-1])
-                        elif trigger_str.startswith("-P"):
-                            # number is between P and timetype
-                            num = int(trigger_str[2:-1])
-                        else:
-                            num = None
-
-
-                        time_letter = trigger_str[-1]
+                        trigger = c.get("TRIGGER")
+                        num = None
                         time_type = None
-                        match (time_letter):
-                            case "M":
-                                time_type = TimeType.MINUTE
 
-                            case "H":
-                                time_type = TimeType.HOUR
-
-                            case "D":
-                                time_type = TimeType.DAY
-
-                            case "W":
+                        if isinstance(trigger, timedelta):
+                            # Negative timedelta for before an event
+                            total_seconds = -trigger.total_seconds()  # make positive
+                            if total_seconds % 604800 == 0:  # divisible by 7 days its a week
+                                num = int(total_seconds // 604800)
                                 time_type = TimeType.WEEK
-
+                            elif total_seconds % 86400 == 0:  # days
+                                num = int(total_seconds // 86400)
+                                time_type = TimeType.DAY
+                            elif total_seconds % 3600 == 0:  # hours
+                                num = int(total_seconds // 3600)
+                                time_type = TimeType.HOUR
+                            elif total_seconds % 60 == 0:  # minutes
+                                num = int(total_seconds // 60)
+                                time_type = TimeType.MINUTE
+                        #this shouldnt happen, but was how I originally thought it was
+                        elif isinstance(trigger, str):
+                            # legacy string format
+                            if trigger.startswith("-PT"):
+                                num = int(trigger[3:-1])
+                            elif trigger.startswith("-P"):
+                                num = int(trigger[2:-1])
+                            letter = trigger[-1]
+                            match letter:
+                                case "M":
+                                    time_type = TimeType.MINUTE
+                                case "H":
+                                    time_type = TimeType.HOUR
+                                case "D":
+                                    time_type = TimeType.DAY
+                                case "W":
+                                    time_type = TimeType.WEEK
 
                         if num is not None and time_type is not None:
                             notif = NotifTime(num, time_type)
@@ -198,6 +207,7 @@ class Schedule():
                 event.add('description', e.description)
 
             # combine date + time
+
             start_dt = datetime.datetime.combine(
                 e.date_range.start_date,
                 e.time_range.start_time
@@ -263,16 +273,19 @@ class Schedule():
                 for n in e.notif_times:
                     num = n.num_timespans
                     # only need the first letter for time type
+
                     type = n.timespan_type.name[0]
 
-                    # if Minute or Hour we need to use PT (Period Time),
-                    # otherwise just P will work
-                    if type == "M" or type == "H" :
-                        trigger = f"-PT{num}{type}"
+                    if type == "M":
+                        trigger = timedelta(minutes=-num)
+                    elif type == "H":
+                        trigger = timedelta(hours=-num)
+                    elif type == "D":
+                        trigger = timedelta(days=-num)
                     else:
-                        trigger = f"-P{num}{type}"
+                        trigger = timedelta(hours=-num)
 
-                    #for each notif time create an alarm ICAL property
+                        #for each notif time create an alarm ICAL property
                     # can't store multiple notifs in one alarm
                     alarm = Alarm()
                     alarm.add('action', 'DISPLAY')
@@ -295,6 +308,7 @@ class Schedule():
                 event.add('WN-NOTIFS', json.dumps(notif_data))
             '''
             cal.add_component(event)
+
 
         with open(filename, 'wb') as f:
             f.write(cal.to_ical())
