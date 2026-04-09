@@ -12,7 +12,7 @@ from Notifier import Notifier
 import json
 import icalendar
 from icalendar import Calendar, Event, Alarm
-from datetime import datetime
+#from datetime import datetime
 from datetime import date
 from datetime import time
 # contains all of a user's events
@@ -65,7 +65,7 @@ class Schedule():
                 if repeat_rule:
                     data = dict(repeat_rule)
                     frequency = data["FREQ"][0]
-                    today = datetime.now()
+                    today = datetime.datetime.now()
                     r_timespan = None
                     r_days = None
                     d_type = None
@@ -108,7 +108,7 @@ class Schedule():
                     elif data.get('UNTIL',[None])[0]:
                         d_type = 'until'
                         until_dt =  data.get('UNTIL')[0]
-                        if isinstance(until_dt, datetime):
+                        if isinstance(until_dt, datetime.datetime):
                             d_times = until_dt.date()  # convert to date
                         else:
                             d_times = until_dt  # if it’s already a date
@@ -198,12 +198,12 @@ class Schedule():
                 event.add('description', e.description)
 
             # combine date + time
-            start_dt = datetime.combine(
+            start_dt = datetime.datetime.combine(
                 e.date_range.start_date,
                 e.time_range.start_time
             )
 
-            end_dt = datetime.combine(
+            end_dt = datetime.datetime.combine(
                 e.date_range.end_date,
                 e.time_range.end_time
             )
@@ -251,7 +251,7 @@ class Schedule():
                     if duration.dur_type == DurationType.UNTIL_DATE:
                         if isinstance(duration.value, date):
                             dur_val = duration.value
-                            rrule["until"] =datetime.combine(duration.value, datetime.min.time())
+                            rrule["until"] =datetime.datetime.combine(duration.value, datetime.datetime.min.time())
 
                 event.add('rrule', rrule)
 
