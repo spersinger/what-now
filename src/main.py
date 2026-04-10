@@ -19,6 +19,7 @@ from kivy.core.window import Window
 from kivy.lang import Builder
 from kivy.config import Config
 from kivy.clock  import Clock
+import asyncio
 
 import icalendar
 from icalendar import Calendar, Event
@@ -79,11 +80,13 @@ class Home(Screen):
         if self.view_type == "month":
             self.view_type = "week"
             self.ids.change_view_type_button.text = "[b]Month View[/b]"
+            self.ids.events_box_header_label.text = "[b]This Weeks Events[/b]"
             self.build_week_calendar()
         else:
             self.view_type = "month"
             self.ids.change_view_type_button.text = "[b]Week View[/b]"
             today = date.today()
+            self.ids.events_box_header_label.text = "[b]Today's Events[/b]"
             self.build_calendar(today.year, today.month)
 
     def build_week_calendar(self):
@@ -117,18 +120,18 @@ class Home(Screen):
             ))
 
         # Day cells
-        event_counts = {}
+        events = {}
         for d in week_days:
-            events = user_schedule.get_for_date(d)
-            event_counts[d.day] = len(events)
+            event_d = user_schedule.get_for_date(d)
+            events[d.day] = event_d
 
         for d in week_days:
-            count = event_counts.get(d.day, 0)
+            events_day_list = events.get(d.day, 0)
             if d == today:
-                cell = CalendarDayToday(day_text=str(d.day), event_count=count)
+                cell = CalendarDayToday(day_text=str(d.day), event_count=len(events_day_list), events=events_day_list)
             else:
                 color = [1, 1, 1, 1]
-                cell = CalendarDayCell(day_text=str(d.day), day_color=color, event_count=count)
+                cell = CalendarDayCell(day_text=str(d.day), day_color=color, event_count=len(events_day_list), events=events_day_list)
             grid.add_widget(cell)
 
         # Show events for the whole week in the events box
@@ -150,11 +153,14 @@ class Home(Screen):
 
         for day in range(1, calendar.monthrange(year, month)[1] + 1):
             count = event_counts.get(day, 0)
+            current_date = Date(year, month, day)
+            events = user_schedule.get_for_date(current_date)
+
             if day == today:
-                cell = CalendarDayToday(day_text=str(day), event_count=count)
+                cell = CalendarDayToday(day_text=str(day), event_count=count, events=events)
             else:
                 color = [0.333, 0.333, 0.333, 1] if ... else [1, 1, 1, 1]
-                cell = CalendarDayCell(day_text=str(day), day_color=color, event_count=count)
+                cell = CalendarDayCell(day_text=str(day), day_color=color, event_count=count, events=events)
             grid.add_widget(cell)
 
     def build_events(self, events):
@@ -162,8 +168,7 @@ class Home(Screen):
         box.clear_widgets()
         if len(events) == 0:
             box.add_widget(EventItem(
-                event_type='No Events Today! Enjoy your day off!',
-                event_name="",
+                event_name="No Events Today! Enjoy your day off!",
                 event_time="",
                 event_date=""
             ))
@@ -171,11 +176,12 @@ class Home(Screen):
             for i, ev in enumerate(events):
                 if i > 0:
                     box.add_widget(Widget(size_hint_y=None, height=1))
+
+                day, date = ev.date_range.start_date.strftime("%A"), ev.date_range.start_date
                 edit_event = EditEventItem(
-                    event_type='Lecture',
                     event_name=ev.name,
                     event_time=str(ev.time_range.start_time) + " - " + str(ev.time_range.end_time),
-                    event_date=""
+                    event_date=f"{day} - {date}"
                 )
                 edit_event.set_event(ev)
                 box.add_widget(edit_event)
@@ -257,18 +263,17 @@ class Home(Screen):
         result = user_schedule.search_events(search_event)
         if result is None:
             layout.add_widget(EventItem(
-                event_type='No events found!',
-                event_name="",
+                event_name="No events found!",
                 event_time="",
                 event_date=""
             ))
         else:
             ev, g_idx, e_idx = result  # unpack the tuple
+            day, date = ev.date_range.start_date.strftime("%A"), ev.date_range.start_date
             edit_event = EditEventItem(
-                event_type='Lecture',
                 event_name=ev.name,
                 event_time=str(ev.time_range.start_time) + " - " + str(ev.time_range.end_time),
-                event_date=""
+                event_date=f"{day} - {date}"
             )
             edit_event.set_event(ev)
             layout.add_widget(edit_event)
@@ -532,6 +537,8 @@ class Home(Screen):
 
     def to_datetime_time(self):
         return time(self.hour, self.minute)
+    def on_enter(self):
+        Clock.schedule_once(lambda dt: self.refresh(), 0.1)
 
 class Voice(Screen): pass
 
@@ -550,6 +557,18 @@ class NavButton(Button):
     screen_name =StringProperty("")
 
 class Root(BoxLayout):
+
+    def on_size(self, *args):
+        self.clear_widgets()
+
+        if self.width >= 800:
+            # Desktop: nav on left
+            self.add_widget(self.ids.nav_bar)
+            self.add_widget(self.ids.sm)
+        else:
+            # Mobile: nav on bottom
+            self.add_widget(self.ids.sm)
+            self.add_widget(self.ids.nav_bar)
 
     def set_active(self, screen_name):
         sm = self.ids.sm
@@ -582,4 +601,5 @@ class WhatNow(App):
 
 
 if __name__ == "__main__":
-    WhatNow().run()
+    asyncio.run(WhatNow().async_run(async_lib='asyncio'))
+    #WhatNow().run()

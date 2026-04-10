@@ -171,7 +171,7 @@
     padding: 2
     Label:
         text: root.day_text
-        font_size: "12sp"
+        font_size: "14sp"
         halign: "center"
         size_hint_y: None
         height: 24
@@ -219,21 +219,14 @@
     height: self.minimum_height
 
     Label:
-        text: "[b]" + root.event_type + "[/b]"
         markup: True
-        halign: "left"
-        font_size: "14sp"
-        size_hint_y: None
-        height: self.texture_size[1]
-        text_size: self.width, None
-
-    Label:
-        text: root.event_name
+        text: "[b]" + root.event_name + "[/b]"
         halign: "left"
         font_size: "12sp"
         size_hint_y: None
         height: self.texture_size[1]
         text_size: self.width, None
+
     Label:
         text: root.event_date
         halign: "left"
@@ -267,18 +260,10 @@
         spacing: 4
 
         Label:
-            text: "[b]" + root.event_type + "[/b]"
             markup: True
+            text: "[b]" + root.event_name + "[/b]"
             halign: "left"
             font_size: "14sp"
-            size_hint_y: None
-            height: self.texture_size[1]
-            text_size: self.width, None
-
-        Label:
-            text: root.event_name
-            halign: "left"
-            font_size: "12sp"
             size_hint_y: None
             height: self.texture_size[1]
             text_size: self.width, None
