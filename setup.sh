@@ -21,6 +21,7 @@ setup_env() {
 
     # install kivy
     export PIP_DISABLE_PIP_VERSION_CHECK=1 #(ignore "new pip version available" message when using pip in this venv)
+    pip install "kivy[full]"
     pip install -r requirements.txt
     echo -e "\ninstalled requiremnets."
 }

@@ -1,16 +1,16 @@
 [app]
 
 # (str) Title of your application
-title = My Application
+title = What Now?
 
 # (str) Package name
-package.name = myapp
+package.name = what_now
 
 # (str) Package domain (needed for android/ios packaging)
-package.domain = org.test
+package.domain = com.spg1
 
 # (str) Source code where the main.py live
-source.dir = .
+source.dir = src
 
 # (list) Source files to include (let empty to include all the files)
 source.include_exts = py,png,jpg,kv,atlas
@@ -37,7 +37,7 @@ version = 0.1
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = python3,kivy
+requirements = python3, kivy, opencv, 
 
 # (str) Custom source folders for requirements
 # Sets custom source for any requirements with recipes
@@ -95,7 +95,7 @@ fullscreen = 0
 
 # (list) Permissions
 # (See https://python-for-android.readthedocs.io/en/latest/buildoptions/#build-options-1 for all the supported syntaxes and properties)
-#android.permissions = android.permission.INTERNET, (name=android.permission.WRITE_EXTERNAL_STORAGE;maxSdkVersion=18)
+android.permissions = INTERNET, POST_NOTIFICATIONS, RECORD_AUDIO, CAMERA
 
 # (list) features (adds uses-feature -tags to manifest)
 #android.features = android.hardware.usb.host
@@ -330,7 +330,7 @@ android.allow_backup = True
 #p4a.source_dir =
 
 # (str) The directory in which python-for-android should look for your own build recipes (if any)
-#p4a.local_recipes =
+p4a.local_recipes = p4a_recipes
 
 # (str) Filename to the hook for p4a
 #p4a.hook =

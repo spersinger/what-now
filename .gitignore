@@ -1,31 +1,28 @@
 # whitelist-style gitignore
 
-# ignored items:
-
-# (default: everything, but still search folders)
-*
-!*/
-
-
-
+# (ignore everything)
+/**
 
 
 
 
 # allowed items:
 
-# the gitignore (a little important)
+# the gitignore, project documents
 !.gitignore
-
-# project documents
 !LICENSE
 !README.md
 
 # other misc. project files
 !requirements.txt
 !setup.sh
-!whatnow.kv
 
-# source files
+# source file dirs
+!src
 !src/*.py
-!ui/*.kv
+
+!ui
+!ui/*.xv
+
+!p4a_recipes
+!p4a_recipes/**
