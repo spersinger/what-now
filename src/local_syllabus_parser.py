@@ -11,7 +11,6 @@ from pathlib import Path
 project_root = Path(__file__).resolve().parent.parent
 model = project_root / "models" / "qwen2.5-coder-1.5b-instruct-q4_0.gguf"
 
-
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 class LocalSyllabusParser:

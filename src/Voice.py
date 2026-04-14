@@ -587,72 +587,7 @@ class Voice(Screen):
 
         self.show_next_command()
 
-    '''  DONT THINK WE SHOULD USE THIS
-    def on_accept_all_commands(self, command,inputs):
-        self.accept_command_popup.dismiss()
 
-        # put new input into only the first command to be performed
-        # convert string to CommandType
-        if "type" in inputs:
-            text = inputs["type"].text.strip().upper()
-            command.c_type = CommandType[text]
-
-        if "name" in inputs:
-            command.data.name = inputs["name"].text
-
-        if "desc" in inputs:
-            command.data.description = inputs["desc"].text
-
-        if "notif" in inputs:
-            text = inputs["notif"].text
-            # split the string into a list
-            notif_list = [n.strip() for n in text.split(",") if n.strip()]
-            # parse notification list
-            command.data.notif_times = command_interpreter.parse_notifications(notif_list)
-
-        if "date" in inputs:
-            text = inputs["date"].text
-            if "->" in text:
-                start_str, end_str = text.split("->")
-                start_str = start_str.strip()
-                end_str = end_str.strip()
-            else:
-                # single date
-                start_str = end_str = text.strip()
-
-            # create date range and put it in data
-            start_date = command_interpreter.parse_date(start_str, command.c_type)
-            end_date = command_interpreter.parse_date(end_str, command.c_type)
-            command.data.date_range = CalendarEvent.DateRange(start_date, end_date)
-
-        if "time" in inputs:
-            text = inputs["time"].text
-            parts = [p.strip() for p in re.split(r'\s*->\s*', text)]
-
-            if len(parts) == 2:
-                start_t, end_t = parts
-            else:
-                start_t = parts[0]
-                end_t = None
-
-            # create time range and put it in data
-            command.data.time_range = command_interpreter.parse_time(start_t, end_t)
-
-        if "repeat" in inputs:
-            text = inputs["repeat"].text
-
-            repeat_dict = self.text_to_repeat_dict(text)
-
-            command.data.repeat = command_interpreter.parse_repeat(repeat_dict, command.data.date_range.start_date,
-                                                                   command.data.date_range.end_date)
-
-        while self.current_command_index < len(self.commands_to_process):
-            command = self.commands_to_process[self.current_command_index]
-            user_schedule.perform_command(command)
-            self.current_command_index += 1
-
-        self.show_next_command()  # Show the next command
-    '''
     def _cleanup(self, _):
         self.commands_to_process = []
         self.current_command_index = 0

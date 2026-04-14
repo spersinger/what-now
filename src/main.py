@@ -13,6 +13,7 @@ from kivy.properties import StringProperty
 from kivy.uix.button import Button
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.gridlayout import GridLayout
+from datetime import date as dt_date
 
 from kivy.core.window import Window
 from kivy.lang import Builder
@@ -20,9 +21,16 @@ from kivy.config import Config
 from kivy.clock  import Clock
 import asyncio
 
+import icalendar
+from icalendar import Calendar, Event
+from datetime import datetime
+from datetime import time
+import json
+
+
 import calendar
 import datetime
-
+from datetime import date
 Builder.load_file('../ui/themed.kv')
 Builder.load_file('../ui/home_page.kv')
 Builder.load_file('../ui/voice_page.kv')
@@ -179,28 +187,15 @@ class Home(Screen):
                 box.add_widget(edit_event)
 
     def on_kv_post(self, base_widget):
-        # Preseeded, just for now though
-        self.add_event(CalendarEvent(
-            name="Intro to Computing",
-            desc="Intro to Computing class",
-            notifs=[NotifTime(15)],
-            dates=DateRange("4/1"),
-            times=TimeRange("9:00a", "10:00a"),
-            repeat=Repeat("week mwf", "forever")
-        ))
-        self.add_event(CalendarEvent(
-            name="Language Translation",
-            desc="Language Translation class",
-            notifs=[NotifTime(15)],
-            dates=DateRange("4/2"),
-            times=TimeRange("12:30p", "1:45p"),
-            repeat=Repeat("week tr", "forever")
-        ))
+        # refresh screen to get loaded events
+        self.refresh()
 
         search_event_btn = self.ids.search_event_button
         search_event_btn.bind(on_release=lambda *a: self.search_event_popup())
         add_event_btn = self.ids.add_event_button
         add_event_btn.bind(on_release=lambda *a: self.add_event_popup())
+        save_btn = self.ids.save_button
+        save_btn.bind(on_release=lambda *a: self.save_current_schedule())
         change_view_type_btn = self.ids.change_view_type_button
         change_view_type_btn.bind(on_release=lambda *a: self.toggle_view())
 
@@ -283,6 +278,24 @@ class Home(Screen):
             edit_event.set_event(ev)
             layout.add_widget(edit_event)
 
+
+    def save_current_schedule(self):
+        events = user_schedule.get_first_events()  # flatten all event groups
+        try:
+            user_schedule.save_to_ics(events)  # your already implemented save function
+            popup = ThemedPopup(
+                title="Saved",
+                content=Label(text="Schedule saved"),
+                size_hint=(0.6, 0.3)
+            )
+            popup.open()
+        except Exception as e:
+            popup = ThemedPopup(
+                title="Error",
+                content=Label(text=f"Failed to save schedule:\n{str(e)}"),
+                size_hint=(0.6, 0.3)
+            )
+            popup.open()
 
     def add_event_popup(self):
         '''
@@ -522,6 +535,8 @@ class Home(Screen):
         btn.bind(on_release=on_submit)
         popup.open()
 
+    def to_datetime_time(self):
+        return time(self.hour, self.minute)
     def on_enter(self):
         Clock.schedule_once(lambda dt: self.refresh(), 0.1)
 
@@ -580,9 +595,7 @@ class Root(BoxLayout):
 class WhatNow(App):
     def build(self):
         self.title = "What Now?"
-        # create a shared instance of command interpreter
-        #self.command_interpreter = command_interpreter
-        #self.schedule = user_schedule
+
 
         return Root()
 
