@@ -27,15 +27,26 @@ from datetime import datetime
 from datetime import time
 import json
 
+import sys
+import os
+
+
+def resource_path(relative_path):
+    """Get absolute path to resource, works for dev and PyInstaller."""
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')), relative_path)
 
 import calendar
 import datetime
 from datetime import date
-Builder.load_file('../ui/themed.kv')
-Builder.load_file('../ui/home_page.kv')
-Builder.load_file('../ui/voice_page.kv')
-Builder.load_file('../ui/scanner_page.kv')
-Builder.load_file('../ui/whatnow.kv')
+
+Builder.load_file(resource_path('ui/themed.kv'))
+Builder.load_file(resource_path('ui/home_page.kv'))
+Builder.load_file(resource_path('ui/voice_page.kv'))
+Builder.load_file(resource_path('ui/scanner_page.kv'))
+Builder.load_file(resource_path('ui/whatnow.kv'))
+
 
 Config.set('kivy', 'camera', 'opencv')
 Config.set('graphics', 'resizable', '0')

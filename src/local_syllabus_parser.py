@@ -6,10 +6,17 @@ import time
 import cv2
 from PIL import Image
 
+import sys
 from pathlib import Path
 # Get the path to the project root (one level up from src)
-project_root = Path(__file__).resolve().parent.parent
-model = project_root / "models" / "qwen2.5-coder-1.5b-instruct-q4_0.gguf"
+def resource_path(relative_path):
+    if hasattr(sys, '_MEIPASS'):
+        return Path(sys._MEIPASS) / relative_path
+    return Path(__file__).resolve().parent.parent / relative_path
+
+model = resource_path("models/qwen2.5-coder-1.5b-instruct-q4_0.gguf")
+
+
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 

@@ -12,6 +12,18 @@ import threading
 from kivy.clock import Clock
 import re
 
+from pathlib import Path
+import sys
+
+def get_asset_path(filename: str) -> str:
+    #correct path for pyinstaller
+    if getattr(sys, 'frozen', False):  # PyInstaller
+        base_path = Path(sys._MEIPASS)
+    else:
+        base_path = Path(__file__).resolve().parent.parent  # project root
+    return str(base_path / filename)
+
+
 
 from Command import CommandType
 from globals import user_schedule, command_interpreter
@@ -32,6 +44,9 @@ class Voice(Screen):
         # initialize the speech recognizer
         self.r = sr.Recognizer()
 
+    def on_kv_post(self, base_widget):
+        # This runs after the KV file is loaded
+        self.ids.mic_icon.source = get_asset_path("mic_white.png")
 
     def voice_to_string(self, text):
         app = App.get_running_app()
@@ -58,7 +73,7 @@ class Voice(Screen):
             self.stop_event.clear()
 
             # change button text when recording
-            mic_icon.source = "../mic_green.png"  # change to green
+            self.ids.mic_icon.source = get_asset_path("mic_green.png")  # change to green
             self.ids.record_button.text = "Stop Recording"
 
             # thread for recording
@@ -75,7 +90,7 @@ class Voice(Screen):
             Clock.schedule_once(lambda dt: setattr(self.ids.record_button, "disabled", False), 3)
             # change button text
             self.ids.record_button.text = "Record"
-            mic_icon.source = "../mic_white.png"  # change back to white
+            self.ids.mic_icon.source = get_asset_path("mic_white.png")  # change back to white
             #enable submit button
             self.ids.submit_voice_button.disabled = False
 

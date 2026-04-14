@@ -23,10 +23,18 @@ import pytesseract
 #we need to have pytesseract inside the what-now folder
 import sys
 from pathlib import Path
+import os
+def resource_path(relative_path):
+    if hasattr(sys, '_MEIPASS'):
+        return Path(sys._MEIPASS) / relative_path
+    return Path(__file__).resolve().parent.parent / relative_path
+
 if sys.platform.startswith("win"):
-    #explicitly set tesseract path
-    project_root = Path(__file__).resolve().parent.parent
-    pytesseract.pytesseract.tesseract_cmd = str(project_root / "pytesseract" / "tesseract.exe")
+    pytesseract.pytesseract.tesseract_cmd = str(
+        resource_path("pytesseract/tesseract.exe")
+    )
+
+
 
 
 import numpy as np
