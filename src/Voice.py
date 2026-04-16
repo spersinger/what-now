@@ -53,7 +53,6 @@ class Voice(Screen):
         app.voice_input += text + " "
         self.ids.voice_text_input.text += text + " "
 
-        #print(app.voice_input)
         return
 
     def start_voice(self):
@@ -478,7 +477,6 @@ class Voice(Screen):
         else:
             # All commands processed
             # clear commands list after they are performed
-            #app.command_interpreter.commands = []
             command_interpreter.commands = []
             Clock.schedule_once(self._cleanup)
 
@@ -486,15 +484,30 @@ class Voice(Screen):
         self.accept_command_popup.dismiss()
 
         #convert string to CommandType
-        if "type" in inputs:
-            text = inputs["type"].text.strip().upper()
+        if "type" not in inputs or not inputs["type"].text.strip():
+            Clock.schedule_once(lambda dt: self.show_error_popup("Missing command type"))
+            return
+
+        text = inputs["type"].text.strip().upper()
+
+        try:
             command.c_type = CommandType[text]
+        except KeyError:
+            Clock.schedule_once(
+                lambda dt: self.show_error_popup(f"Invalid command type: {text}")
+            )
+            return
 
         if command.c_type.name == "EDIT":
             #all this data goes to the second event of
             #the tuple, the edit_event (NOT search_event)
-            if "name" in inputs:
-                command.data[1].name = inputs["name"].text
+            if "name" not in inputs or not inputs["name"].text.strip():
+                Clock.schedule_once(
+                    lambda dt: self.show_error_popup("Missing event name")
+                )
+                return
+            else:
+                command.data[1].name = inputs["name"].text.strip()
 
             if "desc" in inputs:
                 command.data[1].description = inputs["desc"].text
@@ -544,8 +557,13 @@ class Voice(Screen):
             user_schedule.perform_command(command)
 
         elif command.c_type.name == "ADD" or command.c_type.name == "DELETE":
-            if "name" in inputs:
-                command.data.name = inputs["name"].text
+            if "name" not in inputs or not inputs["name"].text.strip():
+                Clock.schedule_once(
+                    lambda dt: self.show_error_popup("Missing event name")
+                )
+                return
+
+            command.data.name = inputs["name"].text.strip()
 
             if "desc" in inputs:
                 command.data.description = inputs["desc"].text
@@ -595,9 +613,6 @@ class Voice(Screen):
 
             user_schedule.perform_command(command)
 
-        #TODO:error handling for non-valid command:
-        else:
-            pass
 
         self.current_command_index += 1
         self.show_next_command()  # Show the next command
