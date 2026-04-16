@@ -116,12 +116,20 @@ class Voice(Screen):
                             lambda dt, t=text: self.voice_to_string(t)
                         )
                     except sr.WaitTimeoutError:
-                        pass
-                    except sr.UnknownValueError:
-                        pass
-                    except sr.RequestError:
                         Clock.schedule_once(
-                            lambda dt: print("Speech service error")
+                            lambda dt: self.show_error_popup("Listening timed out. Try again.")
+                        )
+                    except sr.UnknownValueError:
+                        Clock.schedule_once(
+                            lambda dt: self.show_error_popup("Couldn't understand what you said.")
+                        )
+                    except sr.RequestError as e:
+                        Clock.schedule_once(
+                            lambda dt: self.show_error_popup(f"No internet or speech service issue:\n{e}")
+                        )
+                    except Exception as e:
+                        Clock.schedule_once(
+                            lambda dt: self.show_error_popup(f"Unexpected error:\n{e}")
                         )
         finally:
             self.listen_thread = None
@@ -638,3 +646,12 @@ class Voice(Screen):
             "pattern": pattern,
             "duration": duration
         }
+
+    def show_error_popup(self, message):
+        popup = Popup(
+            title="Error",
+            content=Label(text=message),
+            size_hint=(0.6, 0.3),
+            auto_dismiss=True
+        )
+        popup.open()
