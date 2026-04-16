@@ -144,8 +144,15 @@ class Voice(Screen):
             parts = text.split(" and ")
 
             for part in parts:
-                #send text to command interpreter
-                command_interpreter.generate_commands(part)
+                if len(part) > 85:
+                    Clock.schedule_once(
+                        lambda dt: self.show_error_popup(
+                            "Command too long. If entering multiple, separate them with 'and' "
+                        )
+                    )
+                else:
+                    #send text to command interpreter
+                    command_interpreter.generate_commands(part)
 
             #have schedule perform the commands
             #send each command to perform_commands
