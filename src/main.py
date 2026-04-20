@@ -21,7 +21,6 @@ from kivy.config import Config
 from kivy.clock  import Clock
 import asyncio
 
-import icalendar
 from icalendar import Calendar, Event
 from datetime import datetime
 from datetime import time
@@ -80,6 +79,7 @@ class Home(Screen):
 
     def refresh(self):
         today = date.today()
+        self.ids.calendar_month_label.text = "[b]" + today.strftime("%B") + "[/b]"
         if self.view_type == "month":
             self.build_calendar(today.year, today.month)
         else:
@@ -92,6 +92,24 @@ class Home(Screen):
             self.view_type = "week"
             self.ids.change_view_type_button.text = "[b]Month View[/b]"
             self.ids.events_box_header_label.text = "[b]This Weeks Events[/b]"
+
+            # If weekend (Sat=5, Sun=6), show next week; otherwise show current week
+            today = date.today()
+            weekday = today.weekday()  # Mon=0 ... Sun=6
+            if weekday >= 5:
+                # Jump to next Monday
+                days_until_monday = 7 - weekday
+                week_start = today + timedelta(days=days_until_monday)
+            else:
+                # Start of current week (Monday)
+                week_start = today - timedelta(days=weekday)
+
+            week_days = [week_start + timedelta(days=i) for i in range(7)]
+            all_events = []
+            for d in week_days:
+                all_events.extend(user_schedule.get_for_date(d))
+            self.build_events(all_events)
+
             self.build_week_calendar()
         else:
             self.view_type = "month"
@@ -153,11 +171,16 @@ class Home(Screen):
 
         for d in week_days:
             events_day_list = events.get(d.day, 0)
+            sorted_day_events = sorted(
+                events_day_list,
+                key=lambda ev: ev.time_range.start_time if ev.time_range and ev.time_range.start_time else datetime.time.max
+            )
+
             if d == today:
-                cell = CalendarDayToday(day_text=str(d.day), event_count=len(events_day_list), events=events_day_list)
+                cell = CalendarDayToday(day_text=str(d.day), event_count=len(events_day_list), events=sorted_day_events)
             else:
                 color = [1, 1, 1, 1]
-                cell = CalendarDayCell(day_text=str(d.day), day_color=color, event_count=len(events_day_list), events=events_day_list)
+                cell = CalendarDayCell(day_text=str(d.day), day_color=color, event_count=len(events_day_list), events=sorted_day_events)
             grid.add_widget(cell)
 
         # Sync heights for all rows
@@ -184,12 +207,17 @@ class Home(Screen):
             count = event_counts.get(day, 0)
             current_date = Date(year, month, day)
             events = user_schedule.get_for_date(current_date)
+            sorted_events = sorted(
+                events,
+                key=lambda ev: ev.time_range.start_time if ev.time_range and ev.time_range.start_time else datetime.time.max
+            )
 
             if day == today:
-                cell = CalendarDayToday(day_text=str(day), event_count=count, events=events)
+                cell = CalendarDayToday(day_text=str(day), event_count=count, events=sorted_events)
             else:
                 color = [0.333, 0.333, 0.333, 1] if ... else [1, 1, 1, 1]
-                cell = CalendarDayCell(day_text=str(day), day_color=color, event_count=count, events=events)
+                cell = CalendarDayCell(day_text=str(day), day_color=color, event_count=count, events=sorted_events)
+
             grid.add_widget(cell)
 
         Clock.schedule_once(lambda dt: self._sync_grid_row_heights(grid))
@@ -204,7 +232,12 @@ class Home(Screen):
                 event_date=""
             ))
         else:
-            for i, ev in enumerate(events):
+            sorted_events = sorted(
+                events,
+                key=lambda ev: ev.time_range.start_time if ev.time_range and ev.time_range.start_time else datetime.time.max
+            )
+
+            for i, ev in enumerate(sorted_events):
                 if i > 0:
                     box.add_widget(Widget(size_hint_y=None, height=1))
 
