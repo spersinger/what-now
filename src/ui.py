@@ -53,6 +53,9 @@ class NavButton(Button):
 class PrimaryButton(Button):
     pass
 
+class DangerButton(Button):
+    pass
+
 class ThemedPopup(Popup):
     pass
 
@@ -562,7 +565,78 @@ class EditEventItem(BoxLayout):
         submit_all_btn.bind(on_release=on_submit_all)
         popup.open()
 
+    def delete_event_popup(self):
+        if self.event is None:
+            return
+
+        ev = self.event
+
+        root = BoxLayout(orientation='vertical', spacing=6, padding=10)
+
+        msg_label = Label(
+            text=f"Are you sure you want to delete \"{ev.name}\"?",
+            size_hint_y=None,
+            height=40,
+            halign='center',
+            valign='middle'
+        )
+        root.add_widget(msg_label)
+
+        btn_layout = BoxLayout(orientation='horizontal', spacing=6, size_hint_y=None, height=54)
+
+        delete_all_btn = PrimaryButton(text="Delete all in series", size_hint_x=1, size_hint_y=None, height=44)
+        delete_one_btn = PrimaryButton(text="Delete this event only", size_hint_x=1, size_hint_y=None, height=44)
+
+        btn_layout.add_widget(delete_all_btn)
+        btn_layout.add_widget(delete_one_btn)
+        root.add_widget(btn_layout)
+
+        popup = ThemedPopup(title="", content=root, size_hint=(0.85, 0.4))
+
+        def on_delete_one(*args):
+            search_event = CalendarEvent(
+                name=ev.name,
+                desc=None,
+                notifs=[],
+                dates=ev.date_range,
+                times=None,
+                repeat=Repeat(RepeatCycle("day", "m"), RepeatDuration("times", 0))
+            )
+
+            user_schedule.perform_command(Command(
+                CommandType.DELETE,
+                data=search_event
+            ))
+            screen = self.get_home_screen()
+            if screen:
+                screen.refresh()
+            popup.dismiss()
+
+        def on_delete_all(*args):
+            search_event = CalendarEvent(
+                name=ev.name,
+                desc=None,
+                notifs=[],
+                dates=None,
+                times=None,
+                repeat=Repeat(RepeatCycle("day", "m"), RepeatDuration("times", 0))
+            )
+
+            user_schedule.perform_command(Command(
+                CommandType.DELETE,
+                data=search_event
+            ))
+            screen = self.get_home_screen()
+            if screen:
+                screen.refresh()
+            popup.dismiss()
+
+        delete_one_btn.bind(on_release=on_delete_one)
+        delete_all_btn.bind(on_release=on_delete_all)
+        popup.open()
 
     def on_kv_post(self, base_widget):
         edit_btn = self.ids.edit_button
         edit_btn.bind(on_release=lambda *a: self.edit_event_popup())
+        delete_btn = self.ids.delete_button
+        delete_btn.bind(on_release=lambda *a: self.delete_event_popup())
