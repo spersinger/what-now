@@ -7,6 +7,8 @@ import json
 # re for expression recognition (used to parse date and time)
 import re
 from datetime import datetime
+from kivy.clock import Clock
+from kivy.app import App
 
 from enum import Enum
 from typing import Tuple, List
@@ -494,7 +496,10 @@ class CommandInterpreter:
 
         # for each command that the AI finds
         for cmd_data in result["commands"]:
-            cmd_type = cmd_data["type"]
+            if cmd_data["type"]:
+                cmd_type = cmd_data["type"]
+            else:
+                cmd_type = 'none'
 
             if cmd_type == "ADD" or cmd_type == "SCHEDULE" or cmd_type == "CREATE" or cmd_type == "MAKE":
                 cmd_data["type"] = "ADD" #here in case AI does not map other words to correct type
@@ -653,9 +658,13 @@ class CommandInterpreter:
 
                 self.commands.append(Command(CommandType.EDIT, data=(search_event, updated_event)))
 
-            #TODO: ERROR FOR INVALID COMMAND
+            # defaults to add but this is here just in case
             else:
-                pass
+                sm = App.get_running_app().root
+                voice_screen = sm.get_screen("voice")
+                Clock.schedule_once(
+                    lambda dt: voice_screen.show_error_popup("Invalid command type")
+                )
 
     # manually add command to queue
     # much faster (no AI model use)
