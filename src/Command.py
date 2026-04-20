@@ -1,7 +1,6 @@
 from CalendarEvent import CalendarEvent, DateRange, TimeRange, Repeat, NotifTime, TimeType, RepeatDuration, RepeatCycle, \
     Day
 from datetime import date as Date, time as Time, timedelta
-from local_syllabus_parser import LocalSyllabusParser
 from llama_cpp import Llama
 import json
 # re for expression recognition (used to parse date and time)
@@ -111,7 +110,7 @@ class CommandInterpreter:
 
         self.llm = Llama(
             model_path=str(model),
-            n_ctx=1024,  # Context window
+            n_ctx=4096,  # Context window (4096) seems too big, but I want to amke sure itll be fine
             n_threads=10  # CPU threads
 
         )
@@ -481,6 +480,189 @@ class CommandInterpreter:
             return Repeat(repeat_cycle, repeat_duration)
         else:
             return None
+
+    def preprocess_syllabus(self, text: str) -> str:
+        # Keywords that signal relevant sections
+        relevant_keywords = [
+            "exam", "quiz", "assignment", "due", "lecture", "office hour",
+            "midterm", "final", "homework", "lab", "discussion", "deadline",
+            "monday", "tuesday", "wednesday", "thursday", "friday",
+            "jan", "feb", "mar", "apr", "may", "jun",
+            "jul", "aug", "sep", "oct", "nov", "dec",
+            r"\d{1,2}/\d{1,2}", r"\d{1,2}:\d{2}"  # dates/times
+        ]
+
+        lines = text.splitlines()
+        filtered = []
+
+        for line in lines:
+            line_lower = line.lower()
+            if any(re.search(kw, line_lower) for kw in relevant_keywords):
+                filtered.append(line.strip())
+
+        result = "\n".join(filtered)
+        print(f"Syllabus trimmed: {len(text)} → {len(result)} chars")
+        return result
+
+    def generate_commands_from_syllabus(self, text: str):
+        text = self.preprocess_syllabus(text)
+        print(text)
+        prompt = f"""You are a strict JSON extraction system. Parse the syllabus text into structured data compatible with a CalendarEvent model.
+
+SYLLABUS TEXT:
+{text}
+
+INSTRUCTIONS:
+1. Extract the course name.
+2. Extract ALL events (lectures, office hours, exams, assignments).
+3. Each event MUST match the CalendarEvent structure exactly.
+4. Use string formats compatible with the constructors:
+   - DateRange:
+     - "mm/dd/yyyy"
+     - or "mmm dd yyyy"
+   - TimeRange:
+     - "h:mm[a|p]" (e.g., "9:30a", "2:15p")
+   - RepeatCycle:
+     - "week mtwrf" (example: "week mwf")
+     - "month 1/15 2/15"
+     - "year jan 10 feb 20"
+   - RepeatDuration:
+     - "forever"
+     - "10 times"
+     - "until 12/15/2026"
+5. If an event does NOT repeat, use:
+   - repeat: "day 1 times"
+6. If information is missing, use Null.
+7. notif_times should be an empty list unless explicitly stated.
+8. Output ONLY valid JSON. No explanations.
+
+OUTPUT FORMAT:
+{{
+  "course": "string",
+  "events": [
+    {{
+      "name": "string",
+      "description": "string or null",
+      "notif_times": [
+        {{
+          "num": 10,
+          "unit": "minute"
+        }}
+      ],
+      "date_range": {{
+        "start": "mm/dd/yyyy",
+        "end": "mm/dd/yyyy"
+      }},
+      "time_range": {{
+        "start": "h:mm[a|p]",
+        "end": "h:mm[a|p]"
+      }},
+      "repeat": {{
+        "cycle": "string",
+        "duration": "string"
+      }}
+    }}
+  ]
+}}
+
+JSON:"""
+
+        response = self.llm.create_chat_completion(
+            messages=[{
+                "role": "user",
+                "content": prompt
+            }],
+            temperature=0.1,
+            max_tokens=2000,
+            response_format={"type": "json_object"}  # Forces JSON
+        )
+
+        content = response['choices'][0]['message']['content']
+        try:
+            parsed_data = json.loads(content)
+
+            self.commands = []
+
+            course_name = parsed_data.get("course")
+
+            for event_data in parsed_data.get("events", []):
+                name = event_data.get("name") or course_name or "Unnamed Event"
+                desc = event_data.get("description")
+
+                # -------------------------
+                # DATE RANGE
+                # -------------------------
+                dr = event_data.get("date_range")
+                if dr and dr.get("start"):
+                    start_date = self.parse_date(dr.get("start"), "ADD")
+                    end_date = self.parse_date(dr.get("end"), "ADD") if dr.get("end") else start_date
+                    date_range = DateRange(start_date, end_date)
+                else:
+                    date_range = None
+
+                # -------------------------
+                # TIME RANGE
+                # -------------------------
+                tr = event_data.get("time_range")
+                if tr and tr.get("start"):
+                    time_range = self.parse_time(tr.get("start"), tr.get("end"))
+                else:
+                    time_range = None
+
+                # -------------------------
+                # NOTIFICATIONS
+                # -------------------------
+                notif_times = []
+                for n in event_data.get("notif_times", []):
+                    try:
+                        notif_times.append(
+                            NotifTime(
+                                num=n.get("num", 0),
+                                type=TimeType(n.get("unit", "minute"))
+                            )
+                        )
+                    except:
+                        pass
+
+                # -------------------------
+                # REPEAT
+                # -------------------------
+                repeat_data = event_data.get("repeat")
+
+                if repeat_data:
+                    try:
+                        repeat = Repeat(
+                            repeat_data.get("cycle"),
+                            repeat_data.get("duration")
+                        )
+                    except:
+                        repeat = None
+                else:
+                    repeat = None
+
+                # -------------------------
+                # CREATE EVENT
+                # -------------------------
+                event = CalendarEvent(
+                    name=name,
+                    desc=desc,
+                    notifs=notif_times if notif_times else [],
+                    dates=date_range,
+                    times=time_range,
+                    repeat=repeat
+                )
+
+                # -------------------------
+                # APPEND COMMAND
+                # -------------------------
+                self.commands.append(Command(CommandType.ADD, event))
+
+            return self.commands
+
+            return parsed_data
+        except json.JSONDecodeError as e:
+            print(f"Failed to parse JSON: {e}")
+            return {"error": "Failed to parse JSON"}
 
     # interpret text input and create one or more commands based on it
     # (use AI model to transform text into list of commands)
