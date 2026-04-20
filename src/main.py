@@ -100,6 +100,21 @@ class Home(Screen):
             self.ids.events_box_header_label.text = "[b]Today's Events[/b]"
             self.build_calendar(today.year, today.month)
 
+    def _sync_grid_row_heights(self, grid):
+        children = list(grid.children)
+        if not children:
+            return
+        cols = 7
+        num_rows = len(children) // cols
+        for row in range(num_rows):
+            row_start = row * cols
+            row_end = row_start + cols
+            row_cells = children[row_start:row_end]
+            max_height = max((c.height for c in row_cells), default=0)
+            for c in row_cells:
+                c.height = max_height
+                c.pos_hint = {'top': 1}
+
     def build_week_calendar(self):
         from datetime import timedelta
         grid = self.ids.calendar_grid
@@ -145,6 +160,9 @@ class Home(Screen):
                 cell = CalendarDayCell(day_text=str(d.day), day_color=color, event_count=len(events_day_list), events=events_day_list)
             grid.add_widget(cell)
 
+        # Sync heights for all rows
+        Clock.schedule_once(lambda dt: self._sync_grid_row_heights(grid))
+
         # Show events for the whole week in the events box
         all_events = []
         for d in week_days:
@@ -173,6 +191,8 @@ class Home(Screen):
                 color = [0.333, 0.333, 0.333, 1] if ... else [1, 1, 1, 1]
                 cell = CalendarDayCell(day_text=str(day), day_color=color, event_count=count, events=events)
             grid.add_widget(cell)
+
+        Clock.schedule_once(lambda dt: self._sync_grid_row_heights(grid))
 
     def build_events(self, events):
         box = self.ids.events_box
@@ -390,6 +410,20 @@ class Home(Screen):
             end_time_row.add_widget(sp)
         layout.add_widget(end_time_row)
 
+        # Notification time selector
+        layout.add_widget(make_label("Notify Before"))
+        notif_num_row = BoxLayout(orientation='horizontal', spacing=4,
+                                  size_hint_y=None, height=40)
+        notif_num_values = [str(n) for n in range(1, 61)]
+        notif_num = ThemedSpinner(text="15", values=notif_num_values,
+                                 size_hint=(1, None), height=40)
+        notif_type_values = ["minutes", "hours", "days", "weeks"]
+        notif_type = ThemedSpinner(text="minutes", values=notif_type_values,
+                                   size_hint=(1, None), height=40)
+        notif_num_row.add_widget(notif_num)
+        notif_num_row.add_widget(notif_type)
+        layout.add_widget(notif_num_row)
+
         # Repeat frequency toggle buttons
         layout.add_widget(make_label("Repeat"))
         freq_row = BoxLayout(orientation='horizontal', spacing=4,
@@ -533,10 +567,19 @@ class Home(Screen):
 
                 repeat = Repeat(rule, repeat_end)
 
+            notif_num_val = int(notif_num.text)
+            notif_type_map = {
+                "minutes": TimeType.MINUTE,
+                "hours": TimeType.HOUR,
+                "days": TimeType.DAY,
+                "weeks": TimeType.WEEK
+            }
+            notif_time = NotifTime(notif_num_val, notif_type_map[notif_type.text])
+
             self.add_event(CalendarEvent(
                 name=name,
                 desc=desc_input.text.strip() or None,
-                notifs=[NotifTime(15)],
+                notifs=[notif_time],
                 dates=DateRange(date_str),
                 times=TimeRange(time_start, time_end),
                 repeat=repeat
