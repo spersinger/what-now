@@ -442,6 +442,44 @@ class Schedule():
         # append the group to the group list
         self.events.append(group)
 
+        # schedule notifications immediately for new event(s)
+        self._schedule_immediate_notifs(group)
+
+    def _schedule_immediate_notifs(self, event_group: List[CalendarEvent]):
+        now = datetime.datetime.now()
+        midnight = datetime.datetime.combine(datetime.date.today() + datetime.timedelta(days=1), datetime.time(0, 0))
+        seconds_to_midnight = (midnight - now).total_seconds()
+
+        for event in event_group:
+            if event.notif_times is None:
+                continue
+            for notif_time in event.notif_times:
+
+                seconds_before = 0
+                match notif_time.timespan_type:
+                    case TimeType.MINUTE:
+                        seconds_before = notif_time.num_timespans * 60
+                    case TimeType.HOUR:
+                        seconds_before = notif_time.num_timespans * 3600
+                    case TimeType.DAY:
+                        continue
+                    case _:
+                        continue
+
+                event_time = datetime.datetime.combine(datetime.date.today(), event.time_range.start_time)
+                notif_dt = event_time - datetime.timedelta(seconds=seconds_before)
+                delay = (notif_dt - now).total_seconds()
+
+                if 0 <= delay < seconds_to_midnight:
+                    label = f"{notif_time.num_timespans} {notif_time.timespan_type.value}"
+                    Clock.schedule_once(
+                        lambda dt, e=event, l=label: self.notifier.send(
+                            f"{e.name}",
+                            f"{e.name} in {l}"
+                        ),
+                        delay
+                    )
+
 
     
     def notify_daily(self):
