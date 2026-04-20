@@ -76,6 +76,7 @@ class CalendarDayCell(ButtonBehavior, BoxLayout):
     day_color = ListProperty([1, 1, 1, 1])
     event_count = NumericProperty(0)
     events = ListProperty([])
+    day_popup = None
 
     def on_event_count(self, instance, value):
         self._rebuild_bars()
@@ -150,17 +151,23 @@ class CalendarDayCell(ButtonBehavior, BoxLayout):
                     event_time=str(ev.time_range.start_time) + " - " + str(ev.time_range.end_time),
                     event_date=f"{day} - {date}"
                 )
-                edit_event.set_event(ev)
+                edit_event.set_event(ev, self)
                 layout.add_widget(edit_event)
 
         root.add_widget(scroll)
-        popup = ThemedPopup(title="", content=root, size_hint=(0.9, 0.92))
-        popup.open()
+        self.day_popup = ThemedPopup(title="", content=root, size_hint=(0.9, 0.92))
+        self.day_popup.open()
+
+    def reopen_day_popup(self):
+        if self.day_popup:
+            self.day_popup.dismiss()
+        self.on_press()
 
 class CalendarDayToday(ButtonBehavior, BoxLayout):
     day_text = StringProperty("")
     event_count = NumericProperty(0)
     events = ListProperty([])
+    day_popup = None
 
     def on_event_count(self, instance, value):
         self._rebuild_bars()
@@ -233,12 +240,17 @@ class CalendarDayToday(ButtonBehavior, BoxLayout):
                     event_time=str(ev.time_range.start_time) + " - " + str(ev.time_range.end_time),
                     event_date=f"{day} - {date}"
                 )
-                edit_event.set_event(ev)
+                edit_event.set_event(ev, self)
                 layout.add_widget(edit_event)
 
         root.add_widget(scroll)
-        popup = ThemedPopup(title="", content=root, size_hint=(0.9, 0.92))
-        popup.open()
+        self.day_popup = ThemedPopup(title="", content=root, size_hint=(0.9, 0.92))
+        self.day_popup.open()
+
+    def reopen_day_popup(self):
+        if self.day_popup:
+            self.day_popup.dismiss()
+        self.on_press()
 
 
 
@@ -252,17 +264,20 @@ class EditEventItem(BoxLayout):
     event_time = StringProperty("")
     event_date = StringProperty("")
     event: CalendarEvent | None = None
+    day_cell = None
 
     def get_home_screen(self):
-        parent = self.parent
-        while parent is not None:
-            if type(parent).__name__ == "Home":
-                return parent
-            parent = parent.parent
+        from kivy.app import App
+        app = App.get_running_app()
+        if app:
+            sm = app.root.ids.get('sm')
+            if sm:
+                return sm.get_screen('home')
         return None
 
-    def set_event(self, event: CalendarEvent):
+    def set_event(self, event: CalendarEvent, day_cell_ref=None):
         self.event = event
+        self.day_cell = day_cell_ref
 
     def edit_event_popup(self):
         if self.event is None:
@@ -571,6 +586,8 @@ class EditEventItem(BoxLayout):
 
         ev = self.event
 
+        print(f"DEBUG: delete_event_popup called for event: {ev.name}, date: {ev.date_range}")
+
         root = BoxLayout(orientation='vertical', spacing=6, padding=10)
 
         msg_label = Label(
@@ -594,32 +611,37 @@ class EditEventItem(BoxLayout):
         popup = ThemedPopup(title="", content=root, size_hint=(0.85, 0.4))
 
         def on_delete_one(*args):
-            search_event = CalendarEvent(
-                name=ev.name,
-                desc=None,
-                notifs=[],
-                dates=ev.date_range,
-                times=None,
-                repeat=Repeat(RepeatCycle("day", "m"), RepeatDuration("times", 0))
-            )
-
-            user_schedule.perform_command(Command(
-                CommandType.DELETE,
-                data=search_event
-            ))
+            from globals import user_schedule as us
+            print(f"DEBUG on_delete_one: looking for '{ev.name}' on {ev.date_range.start_date}")
+            
+            found = False
+            for g_idx, group in enumerate(us.events):
+                for e_idx, event in enumerate(group):
+                    print(f"DEBUG: checking event '{event.name}' on {event.date_range.start_date}")
+                    if event.name == ev.name and event.date_range.contains_date(ev.date_range.start_date):
+                        print(f"DEBUG: FOUND match at group {g_idx}, index {e_idx}")
+                        us.delete_event(g_idx, e_idx)
+                        found = True
+                        break
+                if found:
+                    break
             screen = self.get_home_screen()
             if screen:
                 screen.refresh()
+            if self.day_cell:
+                self.day_cell.reopen_day_popup()
             popup.dismiss()
 
         def on_delete_all(*args):
+            from globals import user_schedule
+
             search_event = CalendarEvent(
                 name=ev.name,
                 desc=None,
                 notifs=[],
                 dates=None,
                 times=None,
-                repeat=Repeat(RepeatCycle("day", "m"), RepeatDuration("times", 0))
+                repeat=None
             )
 
             user_schedule.perform_command(Command(
@@ -629,6 +651,8 @@ class EditEventItem(BoxLayout):
             screen = self.get_home_screen()
             if screen:
                 screen.refresh()
+            if self.day_cell:
+                self.day_cell.reopen_day_popup()
             popup.dismiss()
 
         delete_one_btn.bind(on_release=on_delete_one)
