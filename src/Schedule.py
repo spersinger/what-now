@@ -356,13 +356,12 @@ class Schedule():
         name = search_term.name
         
         match: Tuple[CalendarEvent, int, int]
-        
+
         # if no date, assume search is for whole group
-        # TODO: necessary? figure out use case if so
         if search_term.date_range is None:
             print("Date range null")
             for g_idx, group in enumerate(self.events):
-                if group[0].name == search_term.name:
+                if group[0].name.strip().lower() == search_term.name.strip().lower():
                     return (group[0], g_idx, None)
             return None
 

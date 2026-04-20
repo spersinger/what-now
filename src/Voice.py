@@ -525,6 +525,7 @@ class Voice(Screen):
 
             if "date" in inputs:
                 text = inputs["date"].text
+
                 if "->" in text:
                     start_str, end_str = text.split("->")
                     start_str = start_str.strip()
@@ -560,7 +561,7 @@ class Voice(Screen):
 
             user_schedule.perform_command(command)
 
-        elif command.c_type.name == "ADD" or command.c_type.name == "DELETE":
+        elif command.c_type.name == "ADD":
             if "name" not in inputs or not inputs["name"].text.strip():
                 Clock.schedule_once(
                     lambda dt: self.show_error_popup("Missing event name")
@@ -581,6 +582,7 @@ class Voice(Screen):
 
             if "date" in inputs:
                 text = inputs["date"].text
+
                 if "->" in text:
                     start_str, end_str = text.split("->")
                     start_str = start_str.strip()
@@ -589,7 +591,7 @@ class Voice(Screen):
                     # single date
                     start_str = end_str = text.strip()
 
-                # create date range and put it in data
+               # create date range and put it in data
                 start_date = command_interpreter.parse_date(start_str, command.c_type)
                 end_date = command_interpreter.parse_date(end_str, command.c_type)
                 command.data.date_range = CalendarEvent.DateRange(start_date,end_date)
@@ -616,6 +618,39 @@ class Voice(Screen):
                 command.data.repeat = command_interpreter.parse_repeat(repeat_dict,command.data.date_range.start_date,command.data.date_range.end_date)
 
             user_schedule.perform_command(command)
+
+        elif command.c_type.name == "DELETE":
+            if "name" not in inputs or not inputs["name"].text.strip():
+                Clock.schedule_once(
+                    lambda dt: self.show_error_popup("Missing event name")
+                )
+                return
+
+            command.data.name = inputs["name"].text.strip()
+
+            if "date" in inputs:
+                text = inputs["date"].text
+                if "None" not in text:
+
+                    if "->" in text:
+                        start_str, end_str = text.split("->")
+                        start_str = start_str.strip()
+                        end_str = end_str.strip()
+                    else:
+                        # single date
+                        start_str = end_str = text.strip()
+
+                    # create date range and put it in data
+                    start_date = command_interpreter.parse_date(start_str, command.c_type)
+                    end_date = command_interpreter.parse_date(end_str, command.c_type)
+                    command.data.date_range = CalendarEvent.DateRange(start_date,end_date)
+                else:
+                    command.data.date_range = None
+            else:
+                command.data.date_range = None
+
+            user_schedule.perform_command(command)
+
 
 
         self.current_command_index += 1
