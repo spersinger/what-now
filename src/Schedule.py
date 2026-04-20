@@ -22,7 +22,6 @@ class Schedule():
     notifier: Notifier
 
     def __init__(self):
-        # TODO: Pull events from iCal file
         self.notifier = Notifier()
         self.events = []
         #auto load events from file
@@ -381,8 +380,9 @@ class Schedule():
                     return (self.events[g_idx][0], g_idx, None)
                 
                 # if date matches, return that event
-                if event.date_range.contains_date(search_term.date_range.start_date):
+                if name_close and event.date_range.contains_date(search_term.date_range.start_date):
                     return (self.events[g_idx][e_idx], g_idx, e_idx)
+
         
         # no match found
         return None
@@ -491,6 +491,7 @@ class Schedule():
             del self.events[group]
         else:
             # delete single event
+            print(group)
             del self.events[group][index]
 
 
@@ -598,10 +599,12 @@ class Schedule():
                 
                 # part 1: find event (or group) to delete
                 response.data = self.search_events(command.data)
+                print("hello")
                 if response.data is None:
                     response.status = StatusCode.ERROR
                     response.status_details = "could not find matching event(s) to delete."
                 else:
+                    print("not none")
                     response.status = StatusCode.SUCCESS
                     response.status_details = "found event(s) to delete."
                     self.delete_event(*(response.data[1:]))
