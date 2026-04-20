@@ -547,7 +547,7 @@ class CommandInterpreter:
                 desc = cmd_data["description"]
 
                 # date
-                if cmd_data["start_date"] or cmd_data["end_date"]:
+                if cmd_data["date"]["start_date"] or cmd_data["date"]["end_date"]:
                     start_date = self.parse_date(cmd_data["date"]["start_date"],cmd_type)
                     end_date = self.parse_date(cmd_data["date"]["end_date"],cmd_type)
                 else:
