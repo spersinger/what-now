@@ -1,27 +1,8 @@
-from llama_cpp import Llama
 import logging
-import json
 import numpy as np
-import time
 import cv2
-from PIL import Image
 
-import sys
-from pathlib import Path
-# Get the path to the project root (one level up from src)
-def resource_path(relative_path):
-    if hasattr(sys, '_MEIPASS'):
-        return Path(sys._MEIPASS) / relative_path
-    return Path(__file__).resolve().parent.parent / relative_path
-
-
-from concurrent.futures import ThreadPoolExecutor, as_completed
-
-class LocalSyllabusParser:
-
-# TODO: Move these into a class
-
-    def deskew_image(img):
+def deskew_image(img):
     """
     Correct image skew using Hough line detection
     """
