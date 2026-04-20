@@ -521,7 +521,6 @@ INSTRUCTIONS:
    - TimeRange:
      - "h:mm[a|p]" (e.g., "9:30a", "2:15p")
    - RepeatCycle:
-     - "day"
      - "week mtwrf" (example: "week mwf")
      - "month 1/15 2/15"
      - "year jan 10 feb 20"
