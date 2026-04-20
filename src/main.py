@@ -293,7 +293,7 @@ class Home(Screen):
     def save_current_schedule(self):
         events = user_schedule.get_first_events()  # flatten all event groups
         try:
-            user_schedule.save_to_ics(events)  # your already implemented save function
+            user_schedule.save_to_ics(events)  
             popup = ThemedPopup(
                 title="Saved",
                 content=Label(text="Schedule saved"),
