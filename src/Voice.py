@@ -115,13 +115,9 @@ class Voice(Screen):
                             lambda dt, t=text: self.voice_to_string(t)
                         )
                     except sr.WaitTimeoutError:
-                        Clock.schedule_once(
-                            lambda dt: self.show_error_popup("Listening timed out. Try again.")
-                        )
+                        pass
                     except sr.UnknownValueError:
-                        Clock.schedule_once(
-                            lambda dt: self.show_error_popup("Couldn't understand what you said.")
-                        )
+                        pass
                     except sr.RequestError as e:
                         Clock.schedule_once(
                             lambda dt: self.show_error_popup(f"No internet or speech service issue:\n{e}")
@@ -329,19 +325,32 @@ class Voice(Screen):
             content.add_widget(name_label)
             content.add_widget(name_text_input)
 
-            if command.data.date_range:
-                date_label = Label(text='Date range:', size_hint_y=None, height=30, halign='left')
-                date_label.bind(size=lambda s, w: s.setter('text_size')(s, (s.width, None)))
-                date_input = TextInput(
-                    text=str(command.data.date_range),
-                    multiline=True,
-                    size_hint_x=1,
-                    size_hint_y=None,
-                    height=35
-                )
-                content.add_widget(date_label)
-                content.add_widget(date_input)
-                inputs["date"] = date_input
+
+            date_label = Label(text='Date range:', size_hint_y=None, height=30, halign='left')
+            date_label.bind(size=lambda s, w: s.setter('text_size')(s, (s.width, None)))
+            date_input = TextInput(
+                text=str(command.data.date_range),
+                multiline=True,
+                size_hint_x=1,
+                size_hint_y=None,
+                height=35
+            )
+            content.add_widget(date_label)
+            content.add_widget(date_input)
+            inputs["date"] = date_input
+
+            time_label = Label(text='New Time:', size_hint_y=None, height=30, halign='left')
+            time_label.bind(size=lambda s, w: s.setter('text_size')(s, (s.width, None)))
+            time_input = TextInput(
+                text=str(command.data.time_range),
+                multiline=True,
+                size_hint_x=1,
+                size_hint_y=None,
+                height=35
+            )
+            content.add_widget(time_label)
+            content.add_widget(time_input)
+            inputs["time"] = time_input
 
 
         elif command.c_type == CommandType.EDIT:
