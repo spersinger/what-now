@@ -491,7 +491,6 @@ class Schedule():
             del self.events[group]
         else:
             # delete single event
-            print(group)
             del self.events[group][index]
 
 
@@ -599,12 +598,10 @@ class Schedule():
                 
                 # part 1: find event (or group) to delete
                 response.data = self.search_events(command.data)
-                print("hello")
                 if response.data is None:
                     response.status = StatusCode.ERROR
                     response.status_details = "could not find matching event(s) to delete."
                 else:
-                    print("not none")
                     response.status = StatusCode.SUCCESS
                     response.status_details = "found event(s) to delete."
                     self.delete_event(*(response.data[1:]))
