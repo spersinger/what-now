@@ -339,18 +339,6 @@ class Voice(Screen):
             content.add_widget(date_input)
             inputs["date"] = date_input
 
-            time_label = Label(text='New Time:', size_hint_y=None, height=30, halign='left')
-            time_label.bind(size=lambda s, w: s.setter('text_size')(s, (s.width, None)))
-            time_input = TextInput(
-                text=str(command.data.time_range),
-                multiline=True,
-                size_hint_x=1,
-                size_hint_y=None,
-                height=35
-            )
-            content.add_widget(time_label)
-            content.add_widget(time_input)
-            inputs["time"] = time_input
 
 
         elif command.c_type == CommandType.EDIT:
