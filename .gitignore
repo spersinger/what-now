@@ -21,7 +21,7 @@
 !LICENSE
 !README.md
 !.github/
-!.github/workflows/
+!.github/**
 
 # other misc. project files
 !requirements.txt
