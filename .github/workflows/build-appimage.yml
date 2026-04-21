@@ -48,6 +48,7 @@ jobs:
         run: |
           rm -rf WhatNow.AppDir/usr/bin/_internal
           rm -f WhatNow.AppDir/usr/bin/WhatNow
+          mkdir -p WhatNow.AppDir/usr/bin/_internal
           cp -r dist/WhatNow/_internal WhatNow.AppDir/usr/bin/_internal
           cp dist/WhatNow/WhatNow WhatNow.AppDir/usr/bin/WhatNow
           chmod +x WhatNow.AppDir/AppRun
