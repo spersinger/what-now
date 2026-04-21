@@ -20,6 +20,8 @@
 # project documents
 !LICENSE
 !README.md
+!.github/
+!.github/**
 
 # other misc. project files
 !requirements.txt
@@ -29,3 +31,13 @@
 # source files
 !src/*.py
 !ui/*.kv
+
+!build-appimage.sh
+!buildozer.spec
+!WhatNow.spec
+!WhatNow.AppDir/AppRun
+!WhatNow.AppDir/.DirIcon
+!WhatNow.AppDir/WhatNow.desktop
+!WhatNow.AppDir/WhatNow.png
+WhatNow.AppDir/usr/bin/*
+dist/*

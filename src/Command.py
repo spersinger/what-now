@@ -14,18 +14,24 @@ from typing import Tuple, List
 
 import sys
 from pathlib import Path
+import sys
+import os
 
-# Get the path to the project root (one level up from src)
-def resource_path(relative_path):
-    if hasattr(sys, '_MEIPASS'):
-        return Path(sys._MEIPASS) / relative_path
-    return Path(__file__).resolve().parent.parent / relative_path
+def get_models_path():
+    if getattr(sys, 'frozen', False):
+        base_path = Path(sys._MEIPASS)
+    else:
+        base_path = Path(__file__).resolve().parent.parent
+    
+    model_path = base_path / "models" / "qwen2.5-coder-1.5b-instruct-q4_0.gguf"
+    if not model_path.exists():
+        internal_path = base_path / "_internal" / "models" / "qwen2.5-coder-1.5b-instruct-q4_0.gguf"
+        if internal_path.exists():
+            return internal_path
+        raise ValueError(f"Model path does not exist: {model_path}")
+    return model_path
 
-model = resource_path("models/qwen2.5-coder-1.5b-instruct-q4_0.gguf")
-
-# Check it exists
-if not model.exists():
-    raise ValueError(f"Model path does not exist: {model}")
+model = get_models_path()
 
 
 

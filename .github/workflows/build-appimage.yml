@@ -1,0 +1,66 @@
+name: Build Linux AppImage
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3.13-dev python3-pip portaudio19-dev libpq-dev
+
+      - name: Set up virtual environment
+        run: |
+          python3.13 -m venv .env
+          source .env/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build with PyInstaller
+        run: |
+          source .env/bin/activate
+          pip install pyinstaller
+          pyinstaller WhatNow.spec --clean
+
+      - name: Update AppDir
+        run: |
+          rm -rf WhatNow.AppDir/usr/bin/_internal
+          rm -f WhatNow.AppDir/usr/bin/WhatNow
+          cp -r dist/WhatNow/_internal WhatNow.AppDir/usr/bin/_internal
+          cp dist/WhatNow/WhatNow WhatNow.AppDir/usr/bin/WhatNow
+          chmod +x WhatNow.AppDir/AppRun
+
+      - name: Build AppImage
+        run: |
+          wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
+          chmod +x appimagetool
+          ARCH=$(uname -m) ./appimagetool WhatNow.AppDir WhatNow-${ARCH}.AppImage
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WhatNow-AppImage
+          path: WhatNow-*.AppImage
+
+      - name: Upload to Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: WhatNow-*.AppImage
