@@ -22,7 +22,6 @@ class Schedule():
     notifier: Notifier
 
     def __init__(self):
-        # TODO: Pull events from iCal file
         self.notifier = Notifier()
         self.events = []
         #auto load events from file
@@ -357,13 +356,12 @@ class Schedule():
         name = search_term.name
         
         match: Tuple[CalendarEvent, int, int]
-        
+
         # if no date, assume search is for whole group
-        # TODO: necessary? figure out use case if so
         if search_term.date_range is None:
             print("Date range null")
             for g_idx, group in enumerate(self.events):
-                if group[0].name == search_term.name:
+                if group[0].name.strip().lower() == search_term.name.strip().lower():
                     return (group[0], g_idx, None)
             return None
 
@@ -381,8 +379,9 @@ class Schedule():
                     return (self.events[g_idx][0], g_idx, None)
                 
                 # if date matches, return that event
-                if event.date_range.contains_date(search_term.date_range.start_date):
+                if name_close and event.date_range.contains_date(search_term.date_range.start_date):
                     return (self.events[g_idx][e_idx], g_idx, e_idx)
+
         
         # no match found
         return None

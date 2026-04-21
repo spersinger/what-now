@@ -147,7 +147,7 @@ class CommandInterpreter:
         - Extract name - it may be more than 1 word
         - Extract a description if present
         - Extract date (natural language allowed, e.g., "tomorrow", "monday", "dec 8")
-            - If the user specifies a day of the week (e.g., "monday", "tuesday"), or "tomorrow", return the day name as-is instead of a numeric date.
+            - If the user specifies a day of the week (e.g., "monday", "tuesday"), "today" or "tomorrow", return the day name as-is instead of a numeric date.
             -for all dates, if year is missing assume 2026
             -if end_date is missing, make it the same as start_date
         - Extract notifications (e.g., "10 minutes before") as a list
@@ -267,6 +267,11 @@ class CommandInterpreter:
             year, month, day = map(int, date_str.split("-"))
             date_obj = Date(year, month, day)
             return date_obj
+
+        # tomorrow
+        elif "today" in date_str:
+            event_date = Date.today()
+
         # tomorrow
         elif "tomorrow" in date_str:
             event_date = Date.today() + timedelta(days=1)
@@ -724,8 +729,12 @@ JSON:"""
                 desc = cmd_data["description"]
 
                 # date
-                start_date = self.parse_date(cmd_data["date"]["start_date"],cmd_type)
-                end_date = self.parse_date(cmd_data["date"]["end_date"],cmd_type)
+                if cmd_data["date"]["start_date"] or cmd_data["date"]["end_date"]:
+                    start_date = self.parse_date(cmd_data["date"]["start_date"],cmd_type)
+                    end_date = self.parse_date(cmd_data["date"]["end_date"],cmd_type)
+                else:
+                    start_date = None
+                    end_date = None
 
                 if start_date or end_date:
                     delete_date = DateRange(start_date,end_date)
@@ -733,28 +742,26 @@ JSON:"""
                     delete_date = None
 
                 # time
-                time_range = self.parse_time(
-                    cmd_data["start_time"],
-                    cmd_data["end_time"]
-                )
+                if cmd_data["start_time"] or cmd_data["end_time"]:
+                    time_range = self.parse_time(
+                        cmd_data["start_time"],
+                        cmd_data["end_time"]
+                    )
+                else:
+                    time_range = None
 
                 # notifications
-                notifs = self.parse_notifications(cmd_data["notifications"])
+                #notifs = self.parse_notifications(cmd_data["notifications"])
 
-                # repeat
-                if cmd_data["repeat"]:
-                    repeat = self.parse_repeat(cmd_data["repeat"], start_date, end_date)
-                else:
-                    repeat = None
-                # for delete we only need a name and optional date.
+                # for delete we only need a name and optional date and time.
                 #but we must have values for the others
                 event = CalendarEvent(
                     name=name,
-                    desc=desc,
-                    notifs=notifs,
+                    desc=None,
+                    notifs=None,
                     dates=delete_date,
                     times=time_range,
-                    repeat=repeat  # should change this to None, but it is not accepted by repeat
+                    repeat=None
                 )
 
                 self.commands.append(Command(CommandType.DELETE, event))
