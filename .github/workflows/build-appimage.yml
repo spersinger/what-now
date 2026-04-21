@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3.13-dev python3-pip portaudio19-dev libpq-dev
+          sudo apt-get install -y python3-pip portaudio19-dev libpq-dev
 
       - name: Set up virtual environment
         run: |
