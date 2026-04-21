@@ -10,7 +10,10 @@ After installing all dependencies (inlcuding platform-specific; see below subsec
 ### Linux/MacOS Users
 For the `pyaudio` wheel to build correctly, the `python3.13-devel` package must be installed.
 
-### Windows Users
+### Linux AppImage
+Download the `.AppImage` file from the latest release. We recommend using [AppImageLauncher](https://github.com/TheAssassin/AppImageLauncher) to integrate the AppImage into your desktop environment (e.g., adding it to your application menu). Any similar AppImage integration tool will work as well.
+
+## Windows Users
 TODO: figure out install process for windows
 
 ## Details
