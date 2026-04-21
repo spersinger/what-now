@@ -454,10 +454,10 @@ class Voice(Screen):
                 content.add_widget(repeat_input)
                 inputs["repeat"] = repeat_input
 
-        accept_btn = Button(text='Accept', size_hint_x = 1)
+        accept_btn = Button(text='Accept', size_hint_y = None)
         accept_btn.bind(on_press=lambda x: self.on_accept_command(command, inputs))
 
-        reject_btn = Button(text='Reject', size_hint_x = 1)
+        reject_btn = Button(text='Reject', size_hint_y = None)
         reject_btn.bind(on_press=lambda x: self.on_reject_command())
 
         button_box.add_widget(accept_btn)
