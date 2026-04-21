@@ -13,6 +13,7 @@ from kivy.properties import StringProperty
 from kivy.uix.button import Button
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.gridlayout import GridLayout
+from datetime import date as dt_date
 
 from kivy.core.window import Window
 from kivy.lang import Builder
@@ -20,14 +21,31 @@ from kivy.config import Config
 from kivy.clock  import Clock
 import asyncio
 
+from icalendar import Calendar, Event
+from datetime import datetime
+from datetime import time
+import json
+
+import sys
+import os
+
+
+def resource_path(relative_path):
+    """Get absolute path to resource, works for dev and PyInstaller."""
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')), relative_path)
+
 import calendar
 import datetime
+from datetime import date
 
-Builder.load_file('../ui/themed.kv')
-Builder.load_file('../ui/home_page.kv')
-Builder.load_file('../ui/voice_page.kv')
-Builder.load_file('../ui/scanner_page.kv')
-Builder.load_file('../ui/whatnow.kv')
+Builder.load_file(resource_path('ui/themed.kv'))
+Builder.load_file(resource_path('ui/home_page.kv'))
+Builder.load_file(resource_path('ui/voice_page.kv'))
+Builder.load_file(resource_path('ui/scanner_page.kv'))
+Builder.load_file(resource_path('ui/whatnow.kv'))
+
 
 Config.set('kivy', 'camera', 'opencv')
 Config.set('graphics', 'resizable', '0')
@@ -61,6 +79,7 @@ class Home(Screen):
 
     def refresh(self):
         today = date.today()
+        self.ids.calendar_month_label.text = "[b]" + today.strftime("%B") + "[/b]"
         if self.view_type == "month":
             self.build_calendar(today.year, today.month)
         else:
@@ -73,6 +92,24 @@ class Home(Screen):
             self.view_type = "week"
             self.ids.change_view_type_button.text = "[b]Month View[/b]"
             self.ids.events_box_header_label.text = "[b]This Weeks Events[/b]"
+
+            # If weekend (Sat=5, Sun=6), show next week; otherwise show current week
+            today = date.today()
+            weekday = today.weekday()  # Mon=0 ... Sun=6
+            if weekday >= 5:
+                # Jump to next Monday
+                days_until_monday = 7 - weekday
+                week_start = today + timedelta(days=days_until_monday)
+            else:
+                # Start of current week (Monday)
+                week_start = today - timedelta(days=weekday)
+
+            week_days = [week_start + timedelta(days=i) for i in range(7)]
+            all_events = []
+            for d in week_days:
+                all_events.extend(user_schedule.get_for_date(d))
+            self.build_events(all_events)
+
             self.build_week_calendar()
         else:
             self.view_type = "month"
@@ -80,6 +117,21 @@ class Home(Screen):
             today = date.today()
             self.ids.events_box_header_label.text = "[b]Today's Events[/b]"
             self.build_calendar(today.year, today.month)
+
+    def _sync_grid_row_heights(self, grid):
+        children = list(grid.children)
+        if not children:
+            return
+        cols = 7
+        num_rows = len(children) // cols
+        for row in range(num_rows):
+            row_start = row * cols
+            row_end = row_start + cols
+            row_cells = children[row_start:row_end]
+            max_height = max((c.height for c in row_cells), default=0)
+            for c in row_cells:
+                c.height = max_height
+                c.pos_hint = {'top': 1}
 
     def build_week_calendar(self):
         from datetime import timedelta
@@ -119,12 +171,20 @@ class Home(Screen):
 
         for d in week_days:
             events_day_list = events.get(d.day, 0)
+            sorted_day_events = sorted(
+                events_day_list,
+                key=lambda ev: ev.time_range.start_time if ev.time_range and ev.time_range.start_time else datetime.time.max
+            )
+
             if d == today:
-                cell = CalendarDayToday(day_text=str(d.day), event_count=len(events_day_list), events=events_day_list)
+                cell = CalendarDayToday(day_text=str(d.day), event_count=len(events_day_list), events=sorted_day_events)
             else:
                 color = [1, 1, 1, 1]
-                cell = CalendarDayCell(day_text=str(d.day), day_color=color, event_count=len(events_day_list), events=events_day_list)
+                cell = CalendarDayCell(day_text=str(d.day), day_color=color, event_count=len(events_day_list), events=sorted_day_events)
             grid.add_widget(cell)
+
+        # Sync heights for all rows
+        Clock.schedule_once(lambda dt: self._sync_grid_row_heights(grid))
 
         # Show events for the whole week in the events box
         all_events = []
@@ -147,13 +207,20 @@ class Home(Screen):
             count = event_counts.get(day, 0)
             current_date = Date(year, month, day)
             events = user_schedule.get_for_date(current_date)
+            sorted_events = sorted(
+                events,
+                key=lambda ev: ev.time_range.start_time if ev.time_range and ev.time_range.start_time else datetime.time.max
+            )
 
             if day == today:
-                cell = CalendarDayToday(day_text=str(day), event_count=count, events=events)
+                cell = CalendarDayToday(day_text=str(day), event_count=count, events=sorted_events)
             else:
                 color = [0.333, 0.333, 0.333, 1] if ... else [1, 1, 1, 1]
-                cell = CalendarDayCell(day_text=str(day), day_color=color, event_count=count, events=events)
+                cell = CalendarDayCell(day_text=str(day), day_color=color, event_count=count, events=sorted_events)
+
             grid.add_widget(cell)
+
+        Clock.schedule_once(lambda dt: self._sync_grid_row_heights(grid))
 
     def build_events(self, events):
         box = self.ids.events_box
@@ -165,7 +232,12 @@ class Home(Screen):
                 event_date=""
             ))
         else:
-            for i, ev in enumerate(events):
+            sorted_events = sorted(
+                events,
+                key=lambda ev: ev.time_range.start_time if ev.time_range and ev.time_range.start_time else datetime.time.max
+            )
+
+            for i, ev in enumerate(sorted_events):
                 if i > 0:
                     box.add_widget(Widget(size_hint_y=None, height=1))
 
@@ -179,28 +251,15 @@ class Home(Screen):
                 box.add_widget(edit_event)
 
     def on_kv_post(self, base_widget):
-        # Preseeded, just for now though
-        self.add_event(CalendarEvent(
-            name="Intro to Computing",
-            desc="Intro to Computing class",
-            notifs=[NotifTime(15)],
-            dates=DateRange("4/1"),
-            times=TimeRange("9:00a", "10:00a"),
-            repeat=Repeat("week mwf", "forever")
-        ))
-        self.add_event(CalendarEvent(
-            name="Language Translation",
-            desc="Language Translation class",
-            notifs=[NotifTime(15)],
-            dates=DateRange("4/2"),
-            times=TimeRange("12:30p", "1:45p"),
-            repeat=Repeat("week tr", "forever")
-        ))
+        # refresh screen to get loaded events
+        self.refresh()
 
         search_event_btn = self.ids.search_event_button
         search_event_btn.bind(on_release=lambda *a: self.search_event_popup())
         add_event_btn = self.ids.add_event_button
         add_event_btn.bind(on_release=lambda *a: self.add_event_popup())
+        save_btn = self.ids.save_button
+        save_btn.bind(on_release=lambda *a: self.save_current_schedule())
         change_view_type_btn = self.ids.change_view_type_button
         change_view_type_btn.bind(on_release=lambda *a: self.toggle_view())
 
@@ -284,6 +343,24 @@ class Home(Screen):
             layout.add_widget(edit_event)
 
 
+    def save_current_schedule(self):
+        events = user_schedule.get_first_events()  # flatten all event groups
+        try:
+            user_schedule.save_to_ics(events)  
+            popup = ThemedPopup(
+                title="Saved",
+                content=Label(text="Schedule saved"),
+                size_hint=(0.6, 0.3)
+            )
+            popup.open()
+        except Exception as e:
+            popup = ThemedPopup(
+                title="Error",
+                content=Label(text=f"Failed to save schedule:\n{str(e)}"),
+                size_hint=(0.6, 0.3)
+            )
+            popup.open()
+
     def add_event_popup(self):
         '''
         Popup to create and add a new CalendarEvent.
@@ -365,6 +442,20 @@ class Home(Screen):
         for sp in [end_h, end_m, end_ap]:
             end_time_row.add_widget(sp)
         layout.add_widget(end_time_row)
+
+        # Notification time selector
+        layout.add_widget(make_label("Notify Before"))
+        notif_num_row = BoxLayout(orientation='horizontal', spacing=4,
+                                  size_hint_y=None, height=40)
+        notif_num_values = [str(n) for n in range(1, 61)]
+        notif_num = ThemedSpinner(text="15", values=notif_num_values,
+                                 size_hint=(1, None), height=40)
+        notif_type_values = ["minutes", "hours", "days", "weeks"]
+        notif_type = ThemedSpinner(text="minutes", values=notif_type_values,
+                                   size_hint=(1, None), height=40)
+        notif_num_row.add_widget(notif_num)
+        notif_num_row.add_widget(notif_type)
+        layout.add_widget(notif_num_row)
 
         # Repeat frequency toggle buttons
         layout.add_widget(make_label("Repeat"))
@@ -509,10 +600,19 @@ class Home(Screen):
 
                 repeat = Repeat(rule, repeat_end)
 
+            notif_num_val = int(notif_num.text)
+            notif_type_map = {
+                "minutes": TimeType.MINUTE,
+                "hours": TimeType.HOUR,
+                "days": TimeType.DAY,
+                "weeks": TimeType.WEEK
+            }
+            notif_time = NotifTime(notif_num_val, notif_type_map[notif_type.text])
+
             self.add_event(CalendarEvent(
                 name=name,
                 desc=desc_input.text.strip() or None,
-                notifs=[NotifTime(15)],
+                notifs=[notif_time],
                 dates=DateRange(date_str),
                 times=TimeRange(time_start, time_end),
                 repeat=repeat
@@ -522,6 +622,8 @@ class Home(Screen):
         btn.bind(on_release=on_submit)
         popup.open()
 
+    def to_datetime_time(self):
+        return time(self.hour, self.minute)
     def on_enter(self):
         Clock.schedule_once(lambda dt: self.refresh(), 0.1)
 
@@ -580,9 +682,7 @@ class Root(BoxLayout):
 class WhatNow(App):
     def build(self):
         self.title = "What Now?"
-        # create a shared instance of command interpreter
-        #self.command_interpreter = command_interpreter
-        #self.schedule = user_schedule
+
 
         return Root()
 

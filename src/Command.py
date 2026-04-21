@@ -1,16 +1,18 @@
 from CalendarEvent import CalendarEvent, DateRange, TimeRange, Repeat, NotifTime, TimeType, RepeatDuration, RepeatCycle, \
     Day
 from datetime import date as Date, time as Time, timedelta
-from local_syllabus_parser import LocalSyllabusParser
 from llama_cpp import Llama
 import json
 # re for expression recognition (used to parse date and time)
 import re
 from datetime import datetime
+from kivy.clock import Clock
+from kivy.app import App
 
 from enum import Enum
 from typing import Tuple, List
 
+import sys
 from pathlib import Path
 import sys
 import os
@@ -30,6 +32,7 @@ def get_models_path():
     return model_path
 
 model = get_models_path()
+
 
 
 class CommandType(Enum):
@@ -113,7 +116,7 @@ class CommandInterpreter:
 
         self.llm = Llama(
             model_path=str(model),
-            n_ctx=1024,  # Context window
+            n_ctx=4096,  # Context window (4096) seems too big, but I want to amke sure itll be fine
             n_threads=10  # CPU threads
 
         )
@@ -150,7 +153,7 @@ class CommandInterpreter:
         - Extract name - it may be more than 1 word
         - Extract a description if present
         - Extract date (natural language allowed, e.g., "tomorrow", "monday", "dec 8")
-            - If the user specifies a day of the week (e.g., "monday", "tuesday"), or "tomorrow", return the day name as-is instead of a numeric date.
+            - If the user specifies a day of the week (e.g., "monday", "tuesday"), "today" or "tomorrow", return the day name as-is instead of a numeric date.
             -for all dates, if year is missing assume 2026
             -if end_date is missing, make it the same as start_date
         - Extract notifications (e.g., "10 minutes before") as a list
@@ -270,6 +273,11 @@ class CommandInterpreter:
             year, month, day = map(int, date_str.split("-"))
             date_obj = Date(year, month, day)
             return date_obj
+
+        # tomorrow
+        elif "today" in date_str:
+            event_date = Date.today()
+
         # tomorrow
         elif "tomorrow" in date_str:
             event_date = Date.today() + timedelta(days=1)
@@ -484,6 +492,189 @@ class CommandInterpreter:
         else:
             return None
 
+    def preprocess_syllabus(self, text: str) -> str:
+        # Keywords that signal relevant sections
+        relevant_keywords = [
+            "exam", "quiz", "assignment", "due", "lecture", "office hour",
+            "midterm", "final", "homework", "lab", "discussion", "deadline",
+            "monday", "tuesday", "wednesday", "thursday", "friday",
+            "jan", "feb", "mar", "apr", "may", "jun",
+            "jul", "aug", "sep", "oct", "nov", "dec",
+            r"\d{1,2}/\d{1,2}", r"\d{1,2}:\d{2}"  # dates/times
+        ]
+
+        lines = text.splitlines()
+        filtered = []
+
+        for line in lines:
+            line_lower = line.lower()
+            if any(re.search(kw, line_lower) for kw in relevant_keywords):
+                filtered.append(line.strip())
+
+        result = "\n".join(filtered)
+        print(f"Syllabus trimmed: {len(text)} → {len(result)} chars")
+        return result
+
+    def generate_commands_from_syllabus(self, text: str):
+        text = self.preprocess_syllabus(text)
+        print(text)
+        prompt = f"""You are a strict JSON extraction system. Parse the syllabus text into structured data compatible with a CalendarEvent model.
+
+SYLLABUS TEXT:
+{text}
+
+INSTRUCTIONS:
+1. Extract the course name.
+2. Extract ALL events (lectures, office hours, exams, assignments).
+3. Each event MUST match the CalendarEvent structure exactly.
+4. Use string formats compatible with the constructors:
+   - DateRange:
+     - "mm/dd/yyyy"
+     - or "mmm dd yyyy"
+   - TimeRange:
+     - "h:mm[a|p]" (e.g., "9:30a", "2:15p")
+   - RepeatCycle:
+     - "week mtwrf" (example: "week mwf")
+     - "month 1/15 2/15"
+     - "year jan 10 feb 20"
+   - RepeatDuration:
+     - "forever"
+     - "10 times"
+     - "until 12/15/2026"
+5. If an event does NOT repeat, use:
+   - repeat: "day 1 times"
+6. If information is missing, use Null.
+7. notif_times should be an empty list unless explicitly stated.
+8. Output ONLY valid JSON. No explanations.
+
+OUTPUT FORMAT:
+{{
+  "course": "string",
+  "events": [
+    {{
+      "name": "string",
+      "description": "string or null",
+      "notif_times": [
+        {{
+          "num": 10,
+          "unit": "minute"
+        }}
+      ],
+      "date_range": {{
+        "start": "mm/dd/yyyy",
+        "end": "mm/dd/yyyy"
+      }},
+      "time_range": {{
+        "start": "h:mm[a|p]",
+        "end": "h:mm[a|p]"
+      }},
+      "repeat": {{
+        "cycle": "string",
+        "duration": "string"
+      }}
+    }}
+  ]
+}}
+
+JSON:"""
+
+        response = self.llm.create_chat_completion(
+            messages=[{
+                "role": "user",
+                "content": prompt
+            }],
+            temperature=0.1,
+            max_tokens=2000,
+            response_format={"type": "json_object"}  # Forces JSON
+        )
+
+        content = response['choices'][0]['message']['content']
+        try:
+            parsed_data = json.loads(content)
+
+            self.commands = []
+
+            course_name = parsed_data.get("course")
+
+            for event_data in parsed_data.get("events", []):
+                name = event_data.get("name") or course_name or "Unnamed Event"
+                desc = event_data.get("description")
+
+                # -------------------------
+                # DATE RANGE
+                # -------------------------
+                dr = event_data.get("date_range")
+                if dr and dr.get("start"):
+                    start_date = self.parse_date(dr.get("start"), "ADD")
+                    end_date = self.parse_date(dr.get("end"), "ADD") if dr.get("end") else start_date
+                    date_range = DateRange(start_date, end_date)
+                else:
+                    date_range = None
+
+                # -------------------------
+                # TIME RANGE
+                # -------------------------
+                tr = event_data.get("time_range")
+                if tr and tr.get("start"):
+                    time_range = self.parse_time(tr.get("start"), tr.get("end"))
+                else:
+                    time_range = None
+
+                # -------------------------
+                # NOTIFICATIONS
+                # -------------------------
+                notif_times = []
+                for n in event_data.get("notif_times", []):
+                    try:
+                        notif_times.append(
+                            NotifTime(
+                                num=n.get("num", 0),
+                                type=TimeType(n.get("unit", "minute"))
+                            )
+                        )
+                    except:
+                        pass
+
+                # -------------------------
+                # REPEAT
+                # -------------------------
+                repeat_data = event_data.get("repeat")
+
+                if repeat_data:
+                    try:
+                        repeat = Repeat(
+                            repeat_data.get("cycle"),
+                            repeat_data.get("duration")
+                        )
+                    except:
+                        repeat = None
+                else:
+                    repeat = None
+
+                # -------------------------
+                # CREATE EVENT
+                # -------------------------
+                event = CalendarEvent(
+                    name=name,
+                    desc=desc,
+                    notifs=notif_times if notif_times else [],
+                    dates=date_range,
+                    times=time_range,
+                    repeat=repeat
+                )
+
+                # -------------------------
+                # APPEND COMMAND
+                # -------------------------
+                self.commands.append(Command(CommandType.ADD, event))
+
+            return self.commands
+
+            return parsed_data
+        except json.JSONDecodeError as e:
+            print(f"Failed to parse JSON: {e}")
+            return {"error": "Failed to parse JSON"}
+
     # interpret text input and create one or more commands based on it
     # (use AI model to transform text into list of commands)
     def generate_commands(self, text: str):
@@ -498,7 +689,10 @@ class CommandInterpreter:
 
         # for each command that the AI finds
         for cmd_data in result["commands"]:
-            cmd_type = cmd_data["type"]
+            if cmd_data["type"]:
+                cmd_type = cmd_data["type"]
+            else:
+                cmd_type = 'none'
 
             if cmd_type == "ADD" or cmd_type == "SCHEDULE" or cmd_type == "CREATE" or cmd_type == "MAKE":
                 cmd_data["type"] = "ADD" #here in case AI does not map other words to correct type
@@ -541,8 +735,12 @@ class CommandInterpreter:
                 desc = cmd_data["description"]
 
                 # date
-                start_date = self.parse_date(cmd_data["date"]["start_date"],cmd_type)
-                end_date = self.parse_date(cmd_data["date"]["end_date"],cmd_type)
+                if cmd_data["date"]["start_date"] or cmd_data["date"]["end_date"]:
+                    start_date = self.parse_date(cmd_data["date"]["start_date"],cmd_type)
+                    end_date = self.parse_date(cmd_data["date"]["end_date"],cmd_type)
+                else:
+                    start_date = None
+                    end_date = None
 
                 if start_date or end_date:
                     delete_date = DateRange(start_date,end_date)
@@ -550,28 +748,26 @@ class CommandInterpreter:
                     delete_date = None
 
                 # time
-                time_range = self.parse_time(
-                    cmd_data["start_time"],
-                    cmd_data["end_time"]
-                )
+                if cmd_data["start_time"] or cmd_data["end_time"]:
+                    time_range = self.parse_time(
+                        cmd_data["start_time"],
+                        cmd_data["end_time"]
+                    )
+                else:
+                    time_range = None
 
                 # notifications
-                notifs = self.parse_notifications(cmd_data["notifications"])
+                #notifs = self.parse_notifications(cmd_data["notifications"])
 
-                # repeat
-                if cmd_data["repeat"]:
-                    repeat = self.parse_repeat(cmd_data["repeat"], start_date, end_date)
-                else:
-                    repeat = None
-                # for delete we only need a name and optional date.
+                # for delete we only need a name and optional date and time.
                 #but we must have values for the others
                 event = CalendarEvent(
                     name=name,
-                    desc=desc,
-                    notifs=notifs,
+                    desc=None,
+                    notifs=None,
                     dates=delete_date,
                     times=time_range,
-                    repeat=repeat  # should change this to None, but it is not accepted by repeat
+                    repeat=None
                 )
 
                 self.commands.append(Command(CommandType.DELETE, event))
@@ -657,9 +853,13 @@ class CommandInterpreter:
 
                 self.commands.append(Command(CommandType.EDIT, data=(search_event, updated_event)))
 
-            #TODO: ERROR FOR INVALID COMMAND
+            # defaults to add but this is here just in case
             else:
-                pass
+                sm = App.get_running_app().root
+                voice_screen = sm.get_screen("voice")
+                Clock.schedule_once(
+                    lambda dt: voice_screen.show_error_popup("Invalid command type")
+                )
 
     # manually add command to queue
     # much faster (no AI model use)

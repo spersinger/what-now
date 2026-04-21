@@ -9,17 +9,344 @@ import datetime
 
 from Notifier import Notifier
 
+import json
+import icalendar
+from icalendar import Calendar, Event, Alarm
+#from datetime import datetime
+from datetime import date
+from datetime import time
 # contains all of a user's events
 # purpose: manage calendar events
 class Schedule():
     events: List[List[CalendarEvent]] # repeating events grouped together
     notifier: Notifier
-    
+
     def __init__(self):
-        # TODO: Pull events from iCal file
         self.notifier = Notifier()
         self.events = []
-        
+        #auto load events from file
+        self.load_from_ics()
+
+
+    # this function is called on start up to load in the ics file's events
+    def load_from_ics(self,filename="user_schedule.ics"):
+        events = []
+
+        try:
+            with open(filename, 'rb') as f:
+                cal = Calendar.from_ical(f.read())
+        except FileNotFoundError:
+            print("No saved schedule found.")
+            return False
+
+        for component in cal.walk():
+            # we only use VEVENT
+            #other component types are not compatible
+            #and will not be included in our app
+            if component.name == "VEVENT":
+
+                name = str(component.get('summary'))
+                desc = component.get('description')
+
+                start = component.get('dtstart').dt
+                end = component.get('dtend').dt
+
+                # convert back to our objects
+                date_range = DateRange(start.date(), end.date())
+                time_range = TimeRange(
+                    Time(start.hour, start.minute),
+                    Time(end.hour, end.minute)
+                )
+
+                #repeat
+                repeat_rule = component.get('rrule')
+                repeat = None
+                if repeat_rule:
+                    data = dict(repeat_rule)
+                    frequency = data["FREQ"][0]
+                    today = datetime.datetime.now()
+                    r_timespan = None
+                    r_days = None
+                    d_type = None
+                    d_times = None
+
+                    # for cycle
+                    if frequency == "DAILY":
+                        r_timespan = "day"
+                        r_days = {  # set of Day enums
+                            Day.MONDAY,
+                            Day.TUESDAY,
+                            Day.WEDNESDAY,
+                            Day.THURSDAY,
+                            Day.FRIDAY,
+                            Day.SATURDAY,
+                            Day.SUNDAY
+                        }
+                    elif frequency == "WEEKLY":
+                        r_timespan = "week"
+                        r_days = set(self.day_mapping_reverse(d) for d in data["BYDAY"])
+                    elif frequency == "MONTHLY":
+                        r_timespan = "month"
+                        r_date = data["BYMONTHDAY"]
+                        #set a date just this month on certain day
+                        # is good because it should only use the day # I believe?
+                        r_days = {date(year = today.year, month = today.month, day = int(r_date))}
+                    elif frequency == "YEARLY":
+                        r_timespan = "year"
+                        r_date = data["BYMONTHDAY"]
+                        r_month = data["BYMONTH"]
+
+                        r_days = {date(year = today.year, month = int(r_month), day = int(r_date))}
+
+                    # for duration
+                    if data.get('COUNT', [None])[0]:
+
+                        d_type = "times"
+                        d_times =int( data.get('COUNT')[0])
+
+                    elif data.get('UNTIL',[None])[0]:
+                        d_type = 'until'
+                        until_dt =  data.get('UNTIL')[0]
+                        if isinstance(until_dt, datetime.datetime):
+                            d_times = until_dt.date()  # convert to date
+                        else:
+                            d_times = until_dt  # if it’s already a date
+
+                    # if all needed variables exist - make the repeat
+                    # if an incoming icalendar file does not have the
+                    # appropriate rrule data, we will not use it
+                    if r_timespan and r_days and d_type and d_times:
+                        repeat = Repeat(
+                            RepeatCycle(r_timespan, r_days),
+                            RepeatDuration(d_type,d_times)
+                        )
+
+                ''' custom notifs -- trying to get rid of
+                
+                # notifications
+                notif_times = []
+                custom_notifs = component.get('WN-NOTIFS')
+                if custom_notifs:
+                    data = json.loads(str(custom_notifs))
+
+                    for n in data:
+                        notif = NotifTime(n["num"],TimeType[n["type"]])
+                        notif_times.append(notif)
+                '''
+                #for notifications we need to loop over all subcomponents.
+                # find each "VALARM" and convert it to our notifications
+                notif_times = []
+                for c in component.subcomponents:
+                    if c.name == "VALARM":
+                        trigger = c.get("TRIGGER")
+                        num = None
+                        time_type = None
+
+                        if isinstance(trigger, timedelta):
+                            # Negative timedelta for before an event
+                            total_seconds = -trigger.total_seconds()  # make positive
+                            if total_seconds % 604800 == 0:  # divisible by 7 days its a week
+                                num = int(total_seconds // 604800)
+                                time_type = TimeType.WEEK
+                            elif total_seconds % 86400 == 0:  # days
+                                num = int(total_seconds // 86400)
+                                time_type = TimeType.DAY
+                            elif total_seconds % 3600 == 0:  # hours
+                                num = int(total_seconds // 3600)
+                                time_type = TimeType.HOUR
+                            elif total_seconds % 60 == 0:  # minutes
+                                num = int(total_seconds // 60)
+                                time_type = TimeType.MINUTE
+                        #this shouldnt happen, but was how I originally thought it was
+                        elif isinstance(trigger, str):
+                            # legacy string format
+                            if trigger.startswith("-PT"):
+                                num = int(trigger[3:-1])
+                            elif trigger.startswith("-P"):
+                                num = int(trigger[2:-1])
+                            letter = trigger[-1]
+                            match letter:
+                                case "M":
+                                    time_type = TimeType.MINUTE
+                                case "H":
+                                    time_type = TimeType.HOUR
+                                case "D":
+                                    time_type = TimeType.DAY
+                                case "W":
+                                    time_type = TimeType.WEEK
+
+                        if num is not None and time_type is not None:
+                            notif = NotifTime(num, time_type)
+                            notif_times.append(notif)
+
+                event = CalendarEvent(
+                    name=name,
+                    desc=desc,
+                    notifs=notif_times,
+                    dates=date_range,
+                    times=time_range,
+                    repeat=repeat
+                )
+
+                self.add_event(event)
+        #self.events = [[e] for e in events]
+
+        return True
+
+
+    def save_to_ics(self,events, filename="user_schedule.ics"):
+        # cal used for the Calendar inside ics file
+        cal = Calendar()
+
+        for e in events:
+            event = Event()
+            event.add('summary', e.name)
+
+            if e.description:
+                event.add('description', e.description)
+
+            # combine date + time
+
+            start_dt = datetime.datetime.combine(
+                e.date_range.start_date,
+                e.time_range.start_time
+            )
+
+            end_dt = datetime.datetime.combine(
+                e.date_range.end_date,
+                e.time_range.end_time
+            )
+
+            event.add('dtstart', start_dt)
+            event.add('dtend', end_dt)
+
+            # compatible repeat
+            if e.repeat and e.repeat.cycle:
+                cycle = e.repeat.cycle
+
+                rrule = {}
+
+                if cycle.timespan == TimeType.DAY:
+                    rrule['freq'] = 'daily'
+                elif cycle.timespan == TimeType.WEEK:
+                    rrule['freq'] = 'weekly'
+                    if cycle.days:
+                        day_map_ical = {'m': 'MO', 't': 'TU', 'w': 'WE', 'r': 'TH', 'f': 'FR', 's': 'SA', 'u': 'SU'}
+                        rrule['byday'] = [day_map_ical[self.day_mapping(d)] for d in cycle.days]
+
+                elif cycle.timespan == TimeType.MONTH:
+                    rrule['freq'] = 'monthly'
+                    if cycle.days:
+                        # gets the day (ex. 21) to repeat on the 21st of each month
+                        rrule["bymonthday"] = cycle.days.day
+                elif cycle.timespan == TimeType.YEAR:
+                    rrule['freq'] = 'yearly'
+                    if cycle.days:
+                        #get month and day value
+                        rrule["bymonth"] = cycle.days.month
+                        rrule["bymonthday"] = cycle.days.day
+
+                #duration
+
+                if e.repeat.duration:
+                    duration = e.repeat.duration
+                     # If num_times or forever use count for #
+                    # when we load in a "forever" repeat we will just make it
+                    # num_times and 500.
+                    if duration.dur_type == DurationType.NUM_TIMES or duration.dur_type == DurationType.FOREVER:
+                        if isinstance(duration.value, int):
+                            rrule["count"] = duration.value
+                     # if until, place the date into the until
+                    if duration.dur_type == DurationType.UNTIL_DATE:
+                        if isinstance(duration.value, date):
+                            dur_val = duration.value
+                            rrule["until"] =datetime.datetime.combine(duration.value, datetime.datetime.min.time())
+
+                event.add('rrule', rrule)
+
+
+            # compatible notifications
+            if e.notif_times:
+
+                #grab each notification for the event
+                for n in e.notif_times:
+                    num = n.num_timespans
+                    # only need the first letter for time type
+
+                    type = n.timespan_type.name[0]
+
+                    if type == "M":
+                        trigger = timedelta(minutes=-num)
+                    elif type == "H":
+                        trigger = timedelta(hours=-num)
+                    elif type == "D":
+                        trigger = timedelta(days=-num)
+                    else:
+                        trigger = timedelta(hours=-num)
+
+                        #for each notif time create an alarm ICAL property
+                    # can't store multiple notifs in one alarm
+                    alarm = Alarm()
+                    alarm.add('action', 'DISPLAY')
+                    alarm.add('trigger', trigger)
+
+                    event.add_component(alarm)
+
+            '''
+            # THIS IS OLD, ONLY KEEPING IT FOR NOW IN CASE NEW NOTIF
+            # (COMPATIBLE VERSION) DOESNT WORK
+            if e.notif_times:
+
+                notif_data = []
+                for n in e.notif_times:
+                    notif_data.append({
+                        "num": n.num_timespans,
+                        "type": n.timespan_type.name
+                    })
+
+                event.add('WN-NOTIFS', json.dumps(notif_data))
+            '''
+            cal.add_component(event)
+
+
+        with open(filename, 'wb') as f:
+            f.write(cal.to_ical())
+
+    def day_mapping(self,d: Day) -> str:
+        match d:
+            case Day.MONDAY:
+                return 'm'
+            case Day.TUESDAY:
+                return 't'
+            case Day.WEDNESDAY:
+                return 'w'
+            case Day.THURSDAY:
+                return 'r'
+            case Day.FRIDAY:
+                return 'f'
+            case Day.SATURDAY:
+                return 's'
+            case Day.SUNDAY:
+                return 'u'
+
+    def day_mapping_reverse(self,d: str) -> Day:
+        match d:
+            case 'MO':
+                return Day.MONDAY
+            case 'TU':
+                return Day.TUESDAY
+            case 'WE':
+                return Day.WEDNESDAY
+            case 'TH':
+                return Day.THURSDAY
+            case 'FR':
+                return Day.FRIDAY
+            case 'SA':
+                return Day.SATURDAY
+            case 'SU':
+                return Day.SUNDAY
+
+    # TODO: Do we want to use this to auto save the schedule?
     def __cleanup__(self): pass
         # Save events to iCal file
         
@@ -29,13 +356,12 @@ class Schedule():
         name = search_term.name
         
         match: Tuple[CalendarEvent, int, int]
-        
+
         # if no date, assume search is for whole group
-        # TODO: necessary? figure out use case if so
         if search_term.date_range is None:
             print("Date range null")
             for g_idx, group in enumerate(self.events):
-                if group[0].name == search_term.name:
+                if group[0].name.strip().lower() == search_term.name.strip().lower():
                     return (group[0], g_idx, None)
             return None
 
@@ -53,8 +379,9 @@ class Schedule():
                     return (self.events[g_idx][0], g_idx, None)
                 
                 # if date matches, return that event
-                if event.date_range.contains_date(search_term.date_range.start_date):
+                if name_close and event.date_range.contains_date(search_term.date_range.start_date):
                     return (self.events[g_idx][e_idx], g_idx, e_idx)
+
         
         # no match found
         return None
@@ -114,7 +441,47 @@ class Schedule():
         # append the group to the group list
         self.events.append(group)
 
-    
+        # schedule notifications immediately for new event(s)
+        self._schedule_immediate_notifs(group)
+        schedule = self.get_first_events()
+        self.save_to_ics(schedule)
+
+    def _schedule_immediate_notifs(self, event_group: List[CalendarEvent]):
+        now = datetime.datetime.now()
+        midnight = datetime.datetime.combine(datetime.date.today() + datetime.timedelta(days=1), datetime.time(0, 0))
+        seconds_to_midnight = (midnight - now).total_seconds()
+
+        for event in event_group:
+            if event.notif_times is None:
+                continue
+            for notif_time in event.notif_times:
+
+                seconds_before = 0
+                match notif_time.timespan_type:
+                    case TimeType.MINUTE:
+                        seconds_before = notif_time.num_timespans * 60
+                    case TimeType.HOUR:
+                        seconds_before = notif_time.num_timespans * 3600
+                    case TimeType.DAY:
+                        continue
+                    case _:
+                        continue
+
+                event_time = datetime.datetime.combine(datetime.date.today(), event.time_range.start_time)
+                notif_dt = event_time - datetime.timedelta(seconds=seconds_before)
+                delay = (notif_dt - now).total_seconds()
+
+                if 0 <= delay < seconds_to_midnight:
+                    label = f"{notif_time.num_timespans} {notif_time.timespan_type.value}"
+                    Clock.schedule_once(
+                        lambda dt, e=event, l=label: self.notifier.send(
+                            f"{e.name}",
+                            f"{e.name} in {l}"
+                        ),
+                        delay
+                    )
+
+
     
     def notify_daily(self):
         events_today = self.get_for_date(datetime.date.today())
@@ -155,7 +522,7 @@ class Schedule():
                         case _:
                             print(f"Unsupported time type: {notif.timespan_type}, skipping.")
 
-    
+
     # leave index None to delete whole group
     def delete_event(self, group:int, index:int=None):
         if index is None:
@@ -164,6 +531,9 @@ class Schedule():
         else:
             # delete single event
             del self.events[group][index]
+
+        schedule = self.get_first_events()
+        self.save_to_ics(schedule)
 
 
 
@@ -217,7 +587,8 @@ class Schedule():
         else: # single event
             self.events[group][index] = new_event
 
-            
+        schedule = self.get_first_events()
+        self.save_to_ics(schedule)
     
     # performs the tasks set by the command
     # ex. create/modify/delete event
@@ -295,5 +666,20 @@ class Schedule():
                 result += str(event) + "\n"
             
         return result
-    
+
+    def get_all_events(self) -> List[CalendarEvent]:
+        """get all groups into a single list of events."""
+        all_events = []
+        for group in self.events:
+            all_events.extend(group)
+        return all_events
+
+    def get_first_events(self) -> List[CalendarEvent]:
+        """Return only one event per group (the first), for saving/exporting."""
+        first_events = []
+        for group in self.events:
+            if group:  # make sure group is not empty
+                first_events.append(group[0])  # first event in the group is the master
+        return first_events
+
 # TODO: try/except with error propogation instead of None/assert usage? (everywehre, not just this file)

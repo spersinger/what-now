@@ -12,6 +12,18 @@ import threading
 from kivy.clock import Clock
 import re
 
+from pathlib import Path
+import sys
+
+def get_asset_path(filename: str) -> str:
+    #correct path for pyinstaller
+    if getattr(sys, 'frozen', False):  # PyInstaller
+        base_path = Path(sys._MEIPASS)
+    else:
+        base_path = Path(__file__).resolve().parent.parent  # project root
+    return str(base_path / filename)
+
+
 
 from Command import CommandType
 from globals import user_schedule, command_interpreter
@@ -32,13 +44,15 @@ class Voice(Screen):
         # initialize the speech recognizer
         self.r = sr.Recognizer()
 
+    def on_kv_post(self, base_widget):
+        # This runs after the KV file is loaded
+        self.ids.mic_icon.source = get_asset_path("mic_white.png")
 
     def voice_to_string(self, text):
         app = App.get_running_app()
         app.voice_input += text + " "
         self.ids.voice_text_input.text += text + " "
 
-        #print(app.voice_input)
         return
 
     def start_voice(self):
@@ -58,7 +72,7 @@ class Voice(Screen):
             self.stop_event.clear()
 
             # change button text when recording
-            mic_icon.source = "../mic_green.png"  # change to green
+            self.ids.mic_icon.source = get_asset_path("mic_green.png")  # change to green
             self.ids.record_button.text = "Stop Recording"
 
             # thread for recording
@@ -75,7 +89,7 @@ class Voice(Screen):
             Clock.schedule_once(lambda dt: setattr(self.ids.record_button, "disabled", False), 3)
             # change button text
             self.ids.record_button.text = "Record"
-            mic_icon.source = "../mic_white.png"  # change back to white
+            self.ids.mic_icon.source = get_asset_path("mic_white.png")  # change back to white
             #enable submit button
             self.ids.submit_voice_button.disabled = False
 
@@ -104,9 +118,13 @@ class Voice(Screen):
                         pass
                     except sr.UnknownValueError:
                         pass
-                    except sr.RequestError:
+                    except sr.RequestError as e:
                         Clock.schedule_once(
-                            lambda dt: print("Speech service error")
+                            lambda dt: self.show_error_popup(f"No internet or speech service issue:\n{e}")
+                        )
+                    except Exception as e:
+                        Clock.schedule_once(
+                            lambda dt: self.show_error_popup(f"Unexpected error:\n{e}")
                         )
         finally:
             self.listen_thread = None
@@ -122,8 +140,15 @@ class Voice(Screen):
             parts = text.split(" and ")
 
             for part in parts:
-                #send text to command interpreter
-                command_interpreter.generate_commands(part)
+                if len(part) > 85:
+                    Clock.schedule_once(
+                        lambda dt: self.show_error_popup(
+                            "Command too long. If entering multiple, separate them with 'and' "
+                        )
+                    )
+                else:
+                    #send text to command interpreter
+                    command_interpreter.generate_commands(part)
 
             #have schedule perform the commands
             #send each command to perform_commands
@@ -300,19 +325,20 @@ class Voice(Screen):
             content.add_widget(name_label)
             content.add_widget(name_text_input)
 
-            if command.data.date_range:
-                date_label = Label(text='Date range:', size_hint_y=None, height=30, halign='left')
-                date_label.bind(size=lambda s, w: s.setter('text_size')(s, (s.width, None)))
-                date_input = TextInput(
-                    text=str(command.data.date_range),
-                    multiline=True,
-                    size_hint_x=1,
-                    size_hint_y=None,
-                    height=35
-                )
-                content.add_widget(date_label)
-                content.add_widget(date_input)
-                inputs["date"] = date_input
+
+            date_label = Label(text='Date range:', size_hint_y=None, height=30, halign='left')
+            date_label.bind(size=lambda s, w: s.setter('text_size')(s, (s.width, None)))
+            date_input = TextInput(
+                text=str(command.data.date_range),
+                multiline=True,
+                size_hint_x=1,
+                size_hint_y=None,
+                height=35
+            )
+            content.add_widget(date_label)
+            content.add_widget(date_input)
+            inputs["date"] = date_input
+
 
 
         elif command.c_type == CommandType.EDIT:
@@ -428,10 +454,10 @@ class Voice(Screen):
                 content.add_widget(repeat_input)
                 inputs["repeat"] = repeat_input
 
-        accept_btn = Button(text='Accept', size_hint_x = 1)
+        accept_btn = Button(text='Accept', size_hint_y = None)
         accept_btn.bind(on_press=lambda x: self.on_accept_command(command, inputs))
 
-        reject_btn = Button(text='Reject', size_hint_x = 1)
+        reject_btn = Button(text='Reject', size_hint_y = None)
         reject_btn.bind(on_press=lambda x: self.on_reject_command())
 
         button_box.add_widget(accept_btn)
@@ -455,7 +481,6 @@ class Voice(Screen):
         else:
             # All commands processed
             # clear commands list after they are performed
-            #app.command_interpreter.commands = []
             command_interpreter.commands = []
             Clock.schedule_once(self._cleanup)
 
@@ -463,15 +488,30 @@ class Voice(Screen):
         self.accept_command_popup.dismiss()
 
         #convert string to CommandType
-        if "type" in inputs:
-            text = inputs["type"].text.strip().upper()
+        if "type" not in inputs or not inputs["type"].text.strip():
+            Clock.schedule_once(lambda dt: self.show_error_popup("Missing command type"))
+            return
+
+        text = inputs["type"].text.strip().upper()
+
+        try:
             command.c_type = CommandType[text]
+        except KeyError:
+            Clock.schedule_once(
+                lambda dt: self.show_error_popup(f"Invalid command type: {text}")
+            )
+            return
 
         if command.c_type.name == "EDIT":
             #all this data goes to the second event of
             #the tuple, the edit_event (NOT search_event)
-            if "name" in inputs:
-                command.data[1].name = inputs["name"].text
+            if "name" not in inputs or not inputs["name"].text.strip():
+                Clock.schedule_once(
+                    lambda dt: self.show_error_popup("Missing event name")
+                )
+                return
+            else:
+                command.data[1].name = inputs["name"].text.strip()
 
             if "desc" in inputs:
                 command.data[1].description = inputs["desc"].text
@@ -485,6 +525,7 @@ class Voice(Screen):
 
             if "date" in inputs:
                 text = inputs["date"].text
+
                 if "->" in text:
                     start_str, end_str = text.split("->")
                     start_str = start_str.strip()
@@ -520,9 +561,14 @@ class Voice(Screen):
 
             user_schedule.perform_command(command)
 
-        elif command.c_type.name == "ADD" or command.c_type.name == "DELETE":
-            if "name" in inputs:
-                command.data.name = inputs["name"].text
+        elif command.c_type.name == "ADD":
+            if "name" not in inputs or not inputs["name"].text.strip():
+                Clock.schedule_once(
+                    lambda dt: self.show_error_popup("Missing event name")
+                )
+                return
+
+            command.data.name = inputs["name"].text.strip()
 
             if "desc" in inputs:
                 command.data.description = inputs["desc"].text
@@ -536,6 +582,7 @@ class Voice(Screen):
 
             if "date" in inputs:
                 text = inputs["date"].text
+
                 if "->" in text:
                     start_str, end_str = text.split("->")
                     start_str = start_str.strip()
@@ -544,7 +591,7 @@ class Voice(Screen):
                     # single date
                     start_str = end_str = text.strip()
 
-                # create date range and put it in data
+               # create date range and put it in data
                 start_date = command_interpreter.parse_date(start_str, command.c_type)
                 end_date = command_interpreter.parse_date(end_str, command.c_type)
                 command.data.date_range = CalendarEvent.DateRange(start_date,end_date)
@@ -572,9 +619,39 @@ class Voice(Screen):
 
             user_schedule.perform_command(command)
 
-        #TODO:error handling for non-valid command:
-        else:
-            pass
+        elif command.c_type.name == "DELETE":
+            if "name" not in inputs or not inputs["name"].text.strip():
+                Clock.schedule_once(
+                    lambda dt: self.show_error_popup("Missing event name")
+                )
+                return
+
+            command.data.name = inputs["name"].text.strip()
+
+            if "date" in inputs:
+                text = inputs["date"].text
+                if "None" not in text:
+
+                    if "->" in text:
+                        start_str, end_str = text.split("->")
+                        start_str = start_str.strip()
+                        end_str = end_str.strip()
+                    else:
+                        # single date
+                        start_str = end_str = text.strip()
+
+                    # create date range and put it in data
+                    start_date = command_interpreter.parse_date(start_str, command.c_type)
+                    end_date = command_interpreter.parse_date(end_str, command.c_type)
+                    command.data.date_range = CalendarEvent.DateRange(start_date,end_date)
+                else:
+                    command.data.date_range = None
+            else:
+                command.data.date_range = None
+
+            user_schedule.perform_command(command)
+
+
 
         self.current_command_index += 1
         self.show_next_command()  # Show the next command
@@ -587,72 +664,7 @@ class Voice(Screen):
 
         self.show_next_command()
 
-    '''  DONT THINK WE SHOULD USE THIS
-    def on_accept_all_commands(self, command,inputs):
-        self.accept_command_popup.dismiss()
 
-        # put new input into only the first command to be performed
-        # convert string to CommandType
-        if "type" in inputs:
-            text = inputs["type"].text.strip().upper()
-            command.c_type = CommandType[text]
-
-        if "name" in inputs:
-            command.data.name = inputs["name"].text
-
-        if "desc" in inputs:
-            command.data.description = inputs["desc"].text
-
-        if "notif" in inputs:
-            text = inputs["notif"].text
-            # split the string into a list
-            notif_list = [n.strip() for n in text.split(",") if n.strip()]
-            # parse notification list
-            command.data.notif_times = command_interpreter.parse_notifications(notif_list)
-
-        if "date" in inputs:
-            text = inputs["date"].text
-            if "->" in text:
-                start_str, end_str = text.split("->")
-                start_str = start_str.strip()
-                end_str = end_str.strip()
-            else:
-                # single date
-                start_str = end_str = text.strip()
-
-            # create date range and put it in data
-            start_date = command_interpreter.parse_date(start_str, command.c_type)
-            end_date = command_interpreter.parse_date(end_str, command.c_type)
-            command.data.date_range = CalendarEvent.DateRange(start_date, end_date)
-
-        if "time" in inputs:
-            text = inputs["time"].text
-            parts = [p.strip() for p in re.split(r'\s*->\s*', text)]
-
-            if len(parts) == 2:
-                start_t, end_t = parts
-            else:
-                start_t = parts[0]
-                end_t = None
-
-            # create time range and put it in data
-            command.data.time_range = command_interpreter.parse_time(start_t, end_t)
-
-        if "repeat" in inputs:
-            text = inputs["repeat"].text
-
-            repeat_dict = self.text_to_repeat_dict(text)
-
-            command.data.repeat = command_interpreter.parse_repeat(repeat_dict, command.data.date_range.start_date,
-                                                                   command.data.date_range.end_date)
-
-        while self.current_command_index < len(self.commands_to_process):
-            command = self.commands_to_process[self.current_command_index]
-            user_schedule.perform_command(command)
-            self.current_command_index += 1
-
-        self.show_next_command()  # Show the next command
-    '''
     def _cleanup(self, _):
         self.commands_to_process = []
         self.current_command_index = 0
@@ -688,3 +700,12 @@ class Voice(Screen):
             "pattern": pattern,
             "duration": duration
         }
+
+    def show_error_popup(self, message):
+        popup = Popup(
+            title="Error",
+            content=Label(text=message),
+            size_hint=(0.6, 0.3),
+            auto_dismiss=True
+        )
+        popup.open()
