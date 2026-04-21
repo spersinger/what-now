@@ -31,3 +31,8 @@
 # source files
 !src/*.py
 !ui/*.kv
+
+!build-appimage.sh
+!buildozer.spec
+!WhatNow.spec
+!WhatNow.AppDir/*
