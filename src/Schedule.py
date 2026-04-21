@@ -443,6 +443,8 @@ class Schedule():
 
         # schedule notifications immediately for new event(s)
         self._schedule_immediate_notifs(group)
+        schedule = self.get_first_events()
+        self.save_to_ics(schedule)
 
     def _schedule_immediate_notifs(self, event_group: List[CalendarEvent]):
         now = datetime.datetime.now()
@@ -530,6 +532,9 @@ class Schedule():
             # delete single event
             del self.events[group][index]
 
+        schedule = self.get_first_events()
+        self.save_to_ics(schedule)
+
 
 
     # leave index None to modify whole group
@@ -582,7 +587,8 @@ class Schedule():
         else: # single event
             self.events[group][index] = new_event
 
-            
+        schedule = self.get_first_events()
+        self.save_to_ics(schedule)
     
     # performs the tasks set by the command
     # ex. create/modify/delete event
