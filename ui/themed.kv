@@ -139,6 +139,25 @@
             size: self.size
             radius: [5]
 
+<DangerButton>:
+    markup: True
+
+    background_normal: ""
+    background_down: ""
+    background_color: 0, 0, 0, 0
+
+    color: 1, 1, 1, 1
+    disabled_color: 0.33, 0.33, 0.33, 1
+
+    canvas.before:
+        Color:
+            rgba:
+                (0.6, 0.6, 0.6, 1) if self.disabled else (0.7, 0.2, 0.2, 1) if self.state == 'down' else (0.85, 0.25, 0.25, 1)
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [5]
+
 <ThemedPopup>:
     title: ""
     separator_height: 0
@@ -287,8 +306,16 @@
             height: self.texture_size[1]
             text_size: self.width, None
 
-    PrimaryButton:
-        id: edit_button
+    BoxLayout:
+        orientation: "horizontal"
+        size_hint_x: 0.25
         size_hint_y: 0.75
-        size_hint_x: 0.15
-        text: "Edit"
+        spacing: 2
+
+        PrimaryButton:
+            id: edit_button
+            text: "Edit"
+
+        DangerButton:
+            id: delete_button
+            text: "Delete"

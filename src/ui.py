@@ -53,6 +53,9 @@ class NavButton(Button):
 class PrimaryButton(Button):
     pass
 
+class DangerButton(Button):
+    pass
+
 class ThemedPopup(Popup):
     pass
 
@@ -73,6 +76,7 @@ class CalendarDayCell(ButtonBehavior, BoxLayout):
     day_color = ListProperty([1, 1, 1, 1])
     event_count = NumericProperty(0)
     events = ListProperty([])
+    day_popup = None
 
     def on_event_count(self, instance, value):
         self._rebuild_bars()
@@ -147,17 +151,23 @@ class CalendarDayCell(ButtonBehavior, BoxLayout):
                     event_time=str(ev.time_range.start_time) + " - " + str(ev.time_range.end_time),
                     event_date=f"{day} - {date}"
                 )
-                edit_event.set_event(ev)
+                edit_event.set_event(ev, self)
                 layout.add_widget(edit_event)
 
         root.add_widget(scroll)
-        popup = ThemedPopup(title="", content=root, size_hint=(0.9, 0.92))
-        popup.open()
+        self.day_popup = ThemedPopup(title="", content=root, size_hint=(0.9, 0.92))
+        self.day_popup.open()
+
+    def reopen_day_popup(self):
+        if self.day_popup:
+            self.day_popup.dismiss()
+        self.on_press()
 
 class CalendarDayToday(ButtonBehavior, BoxLayout):
     day_text = StringProperty("")
     event_count = NumericProperty(0)
     events = ListProperty([])
+    day_popup = None
 
     def on_event_count(self, instance, value):
         self._rebuild_bars()
@@ -230,12 +240,17 @@ class CalendarDayToday(ButtonBehavior, BoxLayout):
                     event_time=str(ev.time_range.start_time) + " - " + str(ev.time_range.end_time),
                     event_date=f"{day} - {date}"
                 )
-                edit_event.set_event(ev)
+                edit_event.set_event(ev, self)
                 layout.add_widget(edit_event)
 
         root.add_widget(scroll)
-        popup = ThemedPopup(title="", content=root, size_hint=(0.9, 0.92))
-        popup.open()
+        self.day_popup = ThemedPopup(title="", content=root, size_hint=(0.9, 0.92))
+        self.day_popup.open()
+
+    def reopen_day_popup(self):
+        if self.day_popup:
+            self.day_popup.dismiss()
+        self.on_press()
 
 
 
@@ -249,17 +264,20 @@ class EditEventItem(BoxLayout):
     event_time = StringProperty("")
     event_date = StringProperty("")
     event: CalendarEvent | None = None
+    day_cell = None
 
     def get_home_screen(self):
-        parent = self.parent
-        while parent is not None:
-            if type(parent).__name__ == "Home":
-                return parent
-            parent = parent.parent
+        from kivy.app import App
+        app = App.get_running_app()
+        if app:
+            sm = app.root.ids.get('sm')
+            if sm:
+                return sm.get_screen('home')
         return None
 
-    def set_event(self, event: CalendarEvent):
+    def set_event(self, event: CalendarEvent, day_cell_ref=None):
         self.event = event
+        self.day_cell = day_cell_ref
 
     def edit_event_popup(self):
         if self.event is None:
@@ -562,7 +580,87 @@ class EditEventItem(BoxLayout):
         submit_all_btn.bind(on_release=on_submit_all)
         popup.open()
 
+    def delete_event_popup(self):
+        if self.event is None:
+            return
+
+        ev = self.event
+
+        print(f"DEBUG: delete_event_popup called for event: {ev.name}, date: {ev.date_range}")
+
+        root = BoxLayout(orientation='vertical', spacing=6, padding=10)
+
+        msg_label = Label(
+            text=f"Are you sure you want to delete \"{ev.name}\"?",
+            size_hint_y=None,
+            height=40,
+            halign='center',
+            valign='middle'
+        )
+        root.add_widget(msg_label)
+
+        btn_layout = BoxLayout(orientation='horizontal', spacing=6, size_hint_y=None, height=54)
+
+        delete_all_btn = PrimaryButton(text="Delete all in series", size_hint_x=1, size_hint_y=None, height=44)
+        delete_one_btn = PrimaryButton(text="Delete this event only", size_hint_x=1, size_hint_y=None, height=44)
+
+        btn_layout.add_widget(delete_all_btn)
+        btn_layout.add_widget(delete_one_btn)
+        root.add_widget(btn_layout)
+
+        popup = ThemedPopup(title="", content=root, size_hint=(0.85, 0.4))
+
+        def on_delete_one(*args):
+            from globals import user_schedule as us
+            print(f"DEBUG on_delete_one: looking for '{ev.name}' on {ev.date_range.start_date}")
+            
+            found = False
+            for g_idx, group in enumerate(us.events):
+                for e_idx, event in enumerate(group):
+                    print(f"DEBUG: checking event '{event.name}' on {event.date_range.start_date}")
+                    if event.name == ev.name and event.date_range.contains_date(ev.date_range.start_date):
+                        print(f"DEBUG: FOUND match at group {g_idx}, index {e_idx}")
+                        us.delete_event(g_idx, e_idx)
+                        found = True
+                        break
+                if found:
+                    break
+            screen = self.get_home_screen()
+            if screen:
+                screen.refresh()
+            if self.day_cell:
+                self.day_cell.reopen_day_popup()
+            popup.dismiss()
+
+        def on_delete_all(*args):
+            from globals import user_schedule
+
+            search_event = CalendarEvent(
+                name=ev.name,
+                desc=None,
+                notifs=[],
+                dates=None,
+                times=None,
+                repeat=None
+            )
+
+            user_schedule.perform_command(Command(
+                CommandType.DELETE,
+                data=search_event
+            ))
+            screen = self.get_home_screen()
+            if screen:
+                screen.refresh()
+            if self.day_cell:
+                self.day_cell.reopen_day_popup()
+            popup.dismiss()
+
+        delete_one_btn.bind(on_release=on_delete_one)
+        delete_all_btn.bind(on_release=on_delete_all)
+        popup.open()
 
     def on_kv_post(self, base_widget):
         edit_btn = self.ids.edit_button
         edit_btn.bind(on_release=lambda *a: self.edit_event_popup())
+        delete_btn = self.ids.delete_button
+        delete_btn.bind(on_release=lambda *a: self.delete_event_popup())
