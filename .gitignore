@@ -20,6 +20,8 @@
 # project documents
 !LICENSE
 !README.md
+!.github/
+!.github/workflows/
 
 # other misc. project files
 !requirements.txt
